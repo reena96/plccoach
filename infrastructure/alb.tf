@@ -6,7 +6,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = [data.aws_subnet.default_az1.id, data.aws_subnet.default_az2.id]
 
   enable_deletion_protection = true
   enable_http2               = true
@@ -22,7 +22,7 @@ resource "aws_lb_target_group" "api" {
   name        = "${var.project_name}-api-tg"
   port        = 8000
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.default.id
   target_type = "ip"
 
   health_check {
@@ -47,7 +47,7 @@ resource "aws_lb_target_group" "api_alternate" {
   name        = "${var.project_name}-api-tg-alt"
   port        = 8000
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.default.id
   target_type = "ip"
 
   health_check {

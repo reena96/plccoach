@@ -83,6 +83,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "exports" {
     id     = "delete-old-exports"
     status = "Enabled"
 
+    filter {}
+
     expiration {
       days = 30
     }
@@ -133,6 +135,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   rule {
     id     = "transition-to-glacier"
     status = "Enabled"
+
+    filter {}
 
     transition {
       days          = 90

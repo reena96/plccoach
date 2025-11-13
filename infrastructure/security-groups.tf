@@ -4,7 +4,7 @@
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-alb-"
   description = "Security group for Application Load Balancer"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     description = "HTTPS from internet"
@@ -43,7 +43,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "ecs_tasks" {
   name_prefix = "${var.project_name}-ecs-tasks-"
   description = "Security group for ECS tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     description     = "Traffic from ALB"
@@ -74,7 +74,7 @@ resource "aws_security_group" "ecs_tasks" {
 resource "aws_security_group" "rds" {
   name_prefix = "${var.project_name}-rds-"
   description = "Security group for RDS PostgreSQL"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     description     = "PostgreSQL from ECS tasks"
