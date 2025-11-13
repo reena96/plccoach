@@ -163,9 +163,9 @@ main() {
     plan_deployment
 
     echo ""
-    read -p "Do you want to proceed with deployment? (yes/no): " -r
+    read -p "Do you want to proceed with deployment? (yes/y): " -r
     echo ""
-    if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
         deploy_infrastructure
         save_outputs
         post_deployment_setup
