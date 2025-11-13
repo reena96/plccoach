@@ -43,9 +43,9 @@ development_status:
   epic-1: backlog
   1-1-project-infrastructure-setup: done
   1-2-database-schema-creation: done
-  1-3-backend-api-service-foundation: backlog
-  1-4-google-oidc-authentication: backlog
-  1-5-clever-sso-authentication: backlog
+  1-3-backend-api-service-foundation: done
+  1-4-google-oidc-authentication: done
+  1-5-clever-sso-authentication: done
   1-6-session-management-logout: backlog
   1-7-frontend-application-shell: backlog
   1-8-user-profile-role-management: backlog
