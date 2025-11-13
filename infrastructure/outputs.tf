@@ -11,8 +11,8 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "IDs of private subnets"
-  value       = aws_subnet.private[*].id
+  description = "IDs of subnets used for RDS/ECS (using default VPC subnets)"
+  value       = [data.aws_subnet.default_az1.id, data.aws_subnet.default_az2.id]
 }
 
 output "alb_dns_name" {

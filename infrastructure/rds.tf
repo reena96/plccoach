@@ -1,9 +1,9 @@
 # PLC Coach - RDS PostgreSQL Database
 
-# DB Subnet Group
+# DB Subnet Group - using default VPC public subnets
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-db-subnet-group"
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = [data.aws_subnet.default_az1.id, data.aws_subnet.default_az2.id]
 
   tags = {
     Name = "${var.project_name}-db-subnet-group"
@@ -67,7 +67,7 @@ resource "aws_secretsmanager_secret_version" "db_password" {
 resource "aws_db_instance" "main" {
   identifier     = "${var.project_name}-db"
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15"  # Use latest 15.x version
   instance_class = var.db_instance_class
 
   allocated_storage     = 100
@@ -81,6 +81,7 @@ resource "aws_db_instance" "main" {
   password = random_password.db_password.result
 
   multi_az               = var.enable_multi_az
+  publicly_accessible    = false  # Keep it private even in public subnet
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   parameter_group_name   = aws_db_parameter_group.postgres15.name

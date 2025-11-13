@@ -1,0 +1,150 @@
+{
+  "alb_dns_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-alb-230561554.us-east-1.elb.amazonaws.com"
+  },
+  "alb_security_group_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "sg-0f1be2274d27dcd1e"
+  },
+  "alb_zone_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "Z35SXDOTRQ7X7K"
+  },
+  "cloudfront_distribution_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "E7TVM4BHHDN7X"
+  },
+  "cloudfront_domain_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "d3394we8ve9ne3.cloudfront.net"
+  },
+  "cloudwatch_log_group_api": {
+    "sensitive": false,
+    "type": "string",
+    "value": "/ecs/plccoach/api"
+  },
+  "db_secret_arn": {
+    "sensitive": true,
+    "type": "string",
+    "value": "arn:aws:secretsmanager:us-east-1:971422717446:secret:plccoach-db-password-OnoiFn"
+  },
+  "ecr_repository_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "971422717446.dkr.ecr.us-east-1.amazonaws.com/plccoach/api"
+  },
+  "ecs_cluster_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:ecs:us-east-1:971422717446:cluster/plccoach-cluster"
+  },
+  "ecs_cluster_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-cluster"
+  },
+  "ecs_security_group_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "sg-08999701ba2f7d8b1"
+  },
+  "ecs_task_execution_role_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:iam::971422717446:role/plccoach-ecs-task-execution-role"
+  },
+  "ecs_task_role_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:iam::971422717446:role/plccoach-ecs-task-role"
+  },
+  "private_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-0ec51c4b01051563c",
+      "subnet-0dcbb744fa27d655a"
+    ]
+  },
+  "public_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-0ec51c4b01051563c",
+      "subnet-0dcbb744fa27d655a"
+    ]
+  },
+  "rds_database_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach"
+  },
+  "rds_endpoint": {
+    "sensitive": true,
+    "type": "string",
+    "value": "plccoach-db.crws0amqe1e3.us-east-1.rds.amazonaws.com:5432"
+  },
+  "rds_security_group_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "sg-04dd0c32191ab8ef3"
+  },
+  "s3_backups_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-backups-971422717446"
+  },
+  "s3_content_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-content-971422717446"
+  },
+  "s3_exports_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-exports-971422717446"
+  },
+  "s3_frontend_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "plccoach-frontend-971422717446"
+  },
+  "sns_alarms_topic_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:sns:us-east-1:971422717446:plccoach-alarms"
+  },
+  "target_group_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:elasticloadbalancing:us-east-1:971422717446:targetgroup/plccoach-api-tg/c0e176c1812c484f"
+  },
+  "target_group_arn_alternate": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:elasticloadbalancing:us-east-1:971422717446:targetgroup/plccoach-api-tg-alt/3490c1c494efd024"
+  },
+  "vpc_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "vpc-03cd6462b46350c8e"
+  }
+}
