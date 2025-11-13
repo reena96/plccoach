@@ -62,10 +62,8 @@ def upgrade() -> None:
         ),
     )
 
-    # Create partial index on sessions for active sessions only (performance optimization)
-    op.execute(
-        'CREATE INDEX idx_sessions_id ON sessions(id) WHERE expires_at > NOW()'
-    )
+    # Create index on sessions.user_id for user session lookups
+    op.create_index('idx_sessions_user_id', 'sessions', ['user_id'])
 
     # Create conversations table
     op.create_table(
@@ -129,7 +127,7 @@ def downgrade() -> None:
     op.drop_index('idx_messages_conversation', table_name='messages')
     op.drop_index('idx_conversations_share_token', table_name='conversations')
     op.drop_index('idx_conversations_user', table_name='conversations')
-    op.execute('DROP INDEX IF EXISTS idx_sessions_id')
+    op.drop_index('idx_sessions_user_id', table_name='sessions')
     op.drop_index('idx_users_email', table_name='users')
 
     # Drop tables (foreign keys handled by CASCADE)

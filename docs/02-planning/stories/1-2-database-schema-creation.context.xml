@@ -1,0 +1,188 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Database Schema Creation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-2-database-schema-creation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>backend developer</asA>
+    <iWant>to create the initial PostgreSQL database schema</iWant>
+    <soThat>the application can store users, sessions, conversations, and messages</soThat>
+    <tasks>
+      - Set up Alembic migration framework
+      - Create users table migration (id, email, name, role, organization_id, sso_provider, sso_id, created_at, last_login)
+      - Create sessions table migration (id, user_id, expires_at, created_at, last_accessed_at)
+      - Create conversations table migration (id, user_id, title, status, created_at, updated_at, share_token, share_enabled)
+      - Create messages table migration (id, conversation_id, role, content, citations JSONB, domains, feedback_score, input_tokens, output_tokens, cost_usd, created_at)
+      - Install pgvector extension via CREATE EXTENSION
+      - Create performance indexes (idx_users_email, idx_sessions_id with partial WHERE, idx_conversations_user, idx_messages_conversation)
+      - Document rollback procedure
+      - Test migrations on local and dev RDS
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Database tables created: users, sessions, conversations, messages with proper schemas
+    2. pgvector extension installed via CREATE EXTENSION (not parameter group)
+    3. Indexes created: idx_users_email, idx_sessions_id (partial), idx_conversations_user, idx_messages_conversation
+    4. Alembic migration scripts created with rollback capability
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.2: Database Schema Creation</section>
+        <snippet>Create PostgreSQL database schema with users, sessions, conversations, and messages tables. Install pgvector extension. Use Alembic for migrations with 20-connection pooling per service.</snippet>
+      </doc>
+      <doc>
+        <path>docs/infrastructure.md</path>
+        <title>Infrastructure Documentation</title>
+        <section>RDS PostgreSQL Configuration</section>
+        <snippet>Multi-AZ RDS PostgreSQL 15 instance deployed with KMS encryption. Database credentials stored in AWS Secrets Manager. Connection details in terraform-outputs.json. Security group restricts access to ECS tasks only.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/1-1-project-infrastructure-setup.md</path>
+        <title>Story 1.1: Project Infrastructure Setup</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>RDS PostgreSQL 15 deployed to default VPC. pgvector NOT in parameter group (must be installed as extension). Database endpoint and credentials in Secrets Manager at 'plccoach-db-password'. KMS-encrypted Multi-AZ instance.</snippet>
+      </doc>
+      <doc>
+        <path>infrastructure/rds.tf</path>
+        <title>RDS Terraform Configuration</title>
+        <section>Database Instance</section>
+        <snippet>PostgreSQL 15, Multi-AZ, gp3 storage (100GB auto-scaling to 1TB), 30-day backups, parameter group with pg_stat_statements (pgvector removed), encrypted with KMS.</snippet>
+      </doc>
+      <doc>
+        <path>infrastructure/outputs.tf</path>
+        <title>Terraform Outputs</title>
+        <section>Database Outputs</section>
+        <snippet>Outputs: rds_endpoint (sensitive), rds_database_name (plccoach), db_secret_arn (sensitive) containing JSON with username, password, host, port, dbname.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- No existing code - this is the first backend story -->
+    </code>
+    <dependencies>
+      <dependency>
+        <name>Alembic</name>
+        <version>latest</version>
+        <purpose>Database migration framework for Python/SQLAlchemy</purpose>
+      </dependency>
+      <dependency>
+        <name>SQLAlchemy</name>
+        <version>2.0+</version>
+        <purpose>ORM for database interactions (will be used in Story 1.3)</purpose>
+      </dependency>
+      <dependency>
+        <name>psycopg2-binary</name>
+        <version>latest</version>
+        <purpose>PostgreSQL adapter for Python</purpose>
+      </dependency>
+      <dependency>
+        <name>pgvector</name>
+        <version>latest</version>
+        <purpose>PostgreSQL extension for vector embeddings (installed via CREATE EXTENSION)</purpose>
+      </dependency>
+      <dependency>
+        <name>boto3</name>
+        <version>latest</version>
+        <purpose>AWS SDK for retrieving Secrets Manager credentials</purpose>
+      </dependency>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Infrastructure</type>
+      <description>RDS PostgreSQL 15 Multi-AZ instance in default VPC with security group restricting access to ECS tasks only. Use Secrets Manager for credentials (ARN: output from infrastructure)</description>
+    </constraint>
+    <constraint>
+      <type>Schema Design</type>
+      <description>Use UUID v4 for primary keys. All timestamps must be UTC timezone-aware. JSONB for citations field to allow nested structure evolution. CASCADE delete for dependent records.</description>
+    </constraint>
+    <constraint>
+      <type>Migration Tool</type>
+      <description>Must use Alembic for all database migrations. Follow naming convention: timestamp_description.py for migration files. Integrates with SQLAlchemy.</description>
+    </constraint>
+    <constraint>
+      <type>pgvector Extension</type>
+      <description>pgvector NOT in RDS parameter group - must be installed via CREATE EXTENSION in migration script. Required for vector embeddings in future epics.</description>
+    </constraint>
+    <constraint>
+      <type>Security</type>
+      <description>Never commit database credentials. Retrieve from Secrets Manager using boto3. Connection must use KMS-encrypted channel.</description>
+    </constraint>
+    <constraint>
+      <type>Testing</type>
+      <description>Test migrations on local PostgreSQL before applying to RDS. Verify rollback procedures work. Test foreign key constraints and CASCADE behavior.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>AWS Secrets Manager - Database Credentials</name>
+      <kind>AWS Service API</kind>
+      <signature>
+        Secret Name: plccoach-db-password
+        Secret Value (JSON): {
+          "username": "plccoach_admin",
+          "password": "&lt;generated-32-char-password&gt;",
+          "engine": "postgres",
+          "host": "plccoach-db.&lt;region&gt;.rds.amazonaws.com",
+          "port": 5432,
+          "dbname": "plccoach"
+        }
+      </signature>
+      <source>infrastructure/rds.tf lines 44-64, outputs.tf lines 54-58</source>
+    </interface>
+    <interface>
+      <name>Database Tables Schema</name>
+      <kind>PostgreSQL Tables</kind>
+      <signature>
+        users: id (UUID PK), email (TEXT UNIQUE), name (TEXT), role (TEXT CHECK), organization_id (UUID), sso_provider (TEXT), sso_id (TEXT), created_at (TIMESTAMPTZ), last_login (TIMESTAMPTZ)
+
+        sessions: id (UUID PK), user_id (UUID FK users.id CASCADE), expires_at (TIMESTAMPTZ), created_at (TIMESTAMPTZ), last_accessed_at (TIMESTAMPTZ)
+
+        conversations: id (UUID PK), user_id (UUID FK users.id), title (TEXT), status (TEXT), created_at (TIMESTAMPTZ), updated_at (TIMESTAMPTZ), share_token (TEXT UNIQUE), share_enabled (BOOLEAN)
+
+        messages: id (UUID PK), conversation_id (UUID FK conversations.id CASCADE), role (TEXT CHECK), content (TEXT), citations (JSONB), domains (TEXT[]), feedback_score (INTEGER), input_tokens (INTEGER), output_tokens (INTEGER), cost_usd (DECIMAL), created_at (TIMESTAMPTZ)
+      </signature>
+      <source>docs/epics/epic-1-foundation-authentication.md Story 1.2</source>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      - Unit tests for migration scripts (verify table creation)
+      - Integration tests connecting to test database
+      - Verify index creation with EXPLAIN queries
+      - Test foreign key constraints and CASCADE behavior
+      - Validate JSONB operations on citations field
+      - Test session expiry partial index performance
+      - Verify pgvector extension installation
+      - Test migration rollback procedures
+    </standards>
+    <locations>
+      api-service/tests/migrations/test_initial_schema.py - Test migration execution
+      api-service/tests/integration/test_database_setup.py - Test database connectivity and schema
+    </locations>
+    <ideas>
+      - Test UUID generation for primary keys
+      - Verify CASCADE delete removes sessions when user deleted
+      - Verify CASCADE delete removes messages when conversation deleted
+      - Test partial index on sessions.expires_at for active sessions only
+      - Test JSONB insertion and query on citations field
+      - Test connection to RDS using Secrets Manager credentials
+      - Verify pgvector extension version and functionality
+      - Test migration on fresh database (up and down)
+      - Performance test: insert 10k messages and verify index usage
+    </ideas>
+  </tests>
+</story-context>
