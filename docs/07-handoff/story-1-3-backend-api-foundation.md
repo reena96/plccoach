@@ -140,12 +140,23 @@ api-service/
 - [ ] Add request ID to all logs
 - [ ] Test: Check log output format
 
-### Phase 5: Docker & Testing (1-2 hours)
-- [ ] Create `Dockerfile` for production
-- [ ] Create `docker-compose.yml` for local dev
+### Phase 5: Docker Setup (1-2 hours)
+- [ ] Create `Dockerfile` for production deployment
+- [ ] Create `docker-compose.yml` with volume mounts for hot reload
+- [ ] Configure environment variables for container
+- [ ] Test: `docker-compose up` works with auto-reload
+- [ ] Test: Can connect to RDS from container
+
+**Note:** Docker is the PRIMARY development method:
+- Same environment locally and in ECS Fargate production
+- Volume mounts enable hot reload (code changes apply immediately)
+- Native Python (uvicorn directly) available as backup for debugging
+
+### Phase 6: Testing (30-45 min)
 - [ ] Create basic tests in `tests/`
 - [ ] Add pytest configuration
-- [ ] Test: Build and run container
+- [ ] Test: `docker-compose exec api pytest` runs tests
+- [ ] Verify health endpoints work in container
 
 ### Phase 6: Documentation (30 min)
 - [ ] Update `requirements.txt` with new dependencies
@@ -342,10 +353,13 @@ def test_readiness_check():
 ```
 
 ### Manual Testing
-```bash
-# Start the server
-uvicorn app.main:app --reload --port 8000
 
+**Recommended: Using Docker**
+```bash
+# Start services (with hot reload)
+docker-compose up
+
+# In another terminal:
 # Test health endpoint
 curl http://localhost:8000/api/health
 
@@ -354,6 +368,23 @@ curl http://localhost:8000/api/ready
 
 # Check OpenAPI docs
 open http://localhost:8000/docs
+
+# Run tests in container
+docker-compose exec api pytest -v
+
+# View logs
+docker-compose logs -f api
+
+# Stop services
+docker-compose down
+```
+
+**Alternative: Direct Python (for debugging)**
+```bash
+# If you need to debug without Docker
+source venv/bin/activate
+source .env
+uvicorn app.main:app --reload --port 8000
 ```
 
 ---
@@ -407,29 +438,37 @@ open http://localhost:8000/docs
 
 ### Demo Script
 ```bash
-# 1. Start the service
+# 1. Start services with Docker
 cd api-service
-source .env
-uvicorn app.main:app --reload
+docker-compose up -d
 
-# 2. Test health endpoint
+# 2. Check services are running
+docker-compose ps
+
+# 3. Test health endpoint
 curl http://localhost:8000/api/health
 # Expected: {"status": "healthy", "service": "plccoach-api", "version": "0.1.0"}
 
-# 3. Test readiness endpoint
+# 4. Test readiness endpoint
 curl http://localhost:8000/api/ready
 # Expected: {"status": "ready", "database": "connected"}
 
-# 4. View API docs
+# 5. View API docs
 open http://localhost:8000/docs
 
-# 5. Run tests
-pytest tests/ -v
+# 6. Run tests in container
+docker-compose exec api pytest -v
 
-# 6. Build Docker image
+# 7. View logs
+docker-compose logs -f api
+
+# 8. Test hot reload - edit app/main.py and see changes apply automatically
+
+# 9. Stop services
+docker-compose down
+
+# 10. Production build test
 docker build -t plccoach-api:latest .
-
-# 7. Run in container
 docker run -p 8000:8000 --env-file .env plccoach-api:latest
 ```
 

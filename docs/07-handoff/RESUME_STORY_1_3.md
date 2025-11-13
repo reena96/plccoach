@@ -85,17 +85,29 @@ source .env
 
 ### Key Commands
 ```bash
-# Run development server
-uvicorn app.main:app --reload --port 8000
+# Start development environment (PRIMARY METHOD)
+docker-compose up
+
+# Start in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api
 
 # Run tests
-pytest tests/ -v
+docker-compose exec api pytest -v
 
-# Build Docker image
+# Stop services
+docker-compose down
+
+# Alternative: Run directly (for debugging)
+uvicorn app.main:app --reload --port 8000
+
+# Build production image
 docker build -t plccoach-api:latest .
 
-# Check database connection
-python3 -c "from dotenv import load_dotenv; load_dotenv(); from sqlalchemy import create_engine, text; import os; engine = create_engine(os.environ['DATABASE_URL']); print('✅ Connected!' if engine.connect() else '❌ Failed')"
+# Check database connection from container
+docker-compose exec api python3 -c "from sqlalchemy import create_engine, text; import os; engine = create_engine(os.environ['DATABASE_URL']); print('✅ Connected!' if engine.connect() else '❌ Failed')"
 ```
 
 ### Database Connection
