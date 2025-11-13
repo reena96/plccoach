@@ -84,7 +84,6 @@ setup_terraform() {
 plan_deployment() {
     print_info "Planning infrastructure deployment..."
 
-    cd infrastructure
     terraform plan -out=tfplan
 
     print_success "Plan created successfully"
@@ -95,8 +94,6 @@ plan_deployment() {
 deploy_infrastructure() {
     print_info "Deploying infrastructure..."
     print_warning "This will take 15-20 minutes due to RDS creation."
-
-    cd infrastructure
 
     if [ -f tfplan ]; then
         terraform apply tfplan
@@ -112,7 +109,6 @@ deploy_infrastructure() {
 save_outputs() {
     print_info "Saving Terraform outputs..."
 
-    cd infrastructure
     terraform output > ../infrastructure-outputs.txt
     terraform output -json > ../infrastructure-outputs.json
 
@@ -122,8 +118,6 @@ save_outputs() {
 # Function to post-deployment setup
 post_deployment_setup() {
     print_info "Post-deployment setup..."
-
-    cd infrastructure
 
     # Get important values
     ALB_DNS=$(terraform output -raw alb_dns_name)
