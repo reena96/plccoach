@@ -29,6 +29,11 @@ PRIVATE_SUBNETS=$(echo $TERRAFORM_OUTPUTS | jq -r '.private_subnet_ids.value | j
 DB_SECRET_ARN=$(echo $TERRAFORM_OUTPUTS | jq -r '.db_secret_arn.value')
 ALB_DNS=$(echo $TERRAFORM_OUTPUTS | jq -r '.alb_dns_name.value')
 
+# Get full secret ARNs dynamically
+GOOGLE_OAUTH_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id plccoach/production/google-oauth --region $AWS_REGION --query 'ARN' --output text)
+CLEVER_SSO_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id plccoach/production/clever-sso --region $AWS_REGION --query 'ARN' --output text)
+SESSION_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id plccoach/production/session --region $AWS_REGION --query 'ARN' --output text)
+
 echo "📦 Configuration:"
 echo "  ECR Repository: $ECR_REPO"
 echo "  Cluster: $CLUSTER_NAME"
@@ -54,6 +59,34 @@ else
 fi
 
 # Create ECS Task Definition
+echo ""
+echo "🔧 Configuring ALB and Target Group..."
+
+# Get ALB listener ARN
+ALB_ARN=$(echo $TERRAFORM_OUTPUTS | jq -r '.alb_arn.value // empty')
+if [ -z "$ALB_ARN" ]; then
+    ALB_ARN="arn:aws:elasticloadbalancing:$AWS_REGION:$AWS_ACCOUNT_ID:loadbalancer/app/plccoach-alb/0497c3ffc2e6d833"
+fi
+
+LISTENER_ARN=$(aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --region $AWS_REGION --query 'Listeners[0].ListenerArn' --output text)
+
+# Configure ALB listener to forward to target group
+aws elbv2 modify-listener \
+    --listener-arn $LISTENER_ARN \
+    --default-actions Type=forward,TargetGroupArn=$TARGET_GROUP_ARN \
+    --region $AWS_REGION > /dev/null 2>&1
+
+# Configure target group health check
+aws elbv2 modify-target-group \
+    --target-group-arn $TARGET_GROUP_ARN \
+    --health-check-path /api/health \
+    --health-check-interval-seconds 30 \
+    --health-check-timeout-seconds 5 \
+    --healthy-threshold-count 2 \
+    --unhealthy-threshold-count 3 \
+    --region $AWS_REGION > /dev/null
+
+echo "  ✅ ALB and health check configured"
 echo ""
 echo "📝 Creating ECS Task Definition..."
 
@@ -98,23 +131,23 @@ TASK_DEF_JSON=$(cat <<EOF
         },
         {
           "name": "GOOGLE_CLIENT_ID",
-          "valueFrom": "arn:aws:secretsmanager:$AWS_REGION:$AWS_ACCOUNT_ID:secret:plccoach/production/google-oauth:GOOGLE_CLIENT_ID::"
+          "valueFrom": "$GOOGLE_OAUTH_SECRET_ARN:GOOGLE_CLIENT_ID::"
         },
         {
           "name": "GOOGLE_CLIENT_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:$AWS_REGION:$AWS_ACCOUNT_ID:secret:plccoach/production/google-oauth:GOOGLE_CLIENT_SECRET::"
+          "valueFrom": "$GOOGLE_OAUTH_SECRET_ARN:GOOGLE_CLIENT_SECRET::"
         },
         {
           "name": "CLEVER_CLIENT_ID",
-          "valueFrom": "arn:aws:secretsmanager:$AWS_REGION:$AWS_ACCOUNT_ID:secret:plccoach/production/clever-sso:CLEVER_CLIENT_ID::"
+          "valueFrom": "$CLEVER_SSO_SECRET_ARN:CLEVER_CLIENT_ID::"
         },
         {
           "name": "CLEVER_CLIENT_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:$AWS_REGION:$AWS_ACCOUNT_ID:secret:plccoach/production/clever-sso:CLEVER_CLIENT_SECRET::"
+          "valueFrom": "$CLEVER_SSO_SECRET_ARN:CLEVER_CLIENT_SECRET::"
         },
         {
           "name": "SESSION_SECRET_KEY",
-          "valueFrom": "arn:aws:secretsmanager:$AWS_REGION:$AWS_ACCOUNT_ID:secret:plccoach/production/session:SESSION_SECRET_KEY::"
+          "valueFrom": "$SESSION_SECRET_ARN:SESSION_SECRET_KEY::"
         }
       ],
       "logConfiguration": {
@@ -150,21 +183,24 @@ echo "  ✅ Task Definition created: $TASK_DEF_ARN"
 echo ""
 echo "🔍 Checking for existing ECS service..."
 
-if aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --region $AWS_REGION --query 'services[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
+SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --region $AWS_REGION --query 'services[0].status' --output text 2>/dev/null || echo "NONE")
+
+if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
     echo "  ℹ️  Service exists - updating..."
 
     aws ecs update-service \
         --cluster $CLUSTER_NAME \
         --service $SERVICE_NAME \
         --task-definition $TASK_FAMILY \
+        --network-configuration "awsvpcConfiguration={subnets=[$PRIVATE_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
         --region $AWS_REGION \
         --output text > /dev/null
 
     echo "  ✅ Service updated"
 else
-    echo "  ℹ️  Service doesn't exist - creating..."
+    echo "  ℹ️  Service doesn't exist or is inactive - creating..."
 
-    # Create service
+    # Create service (using public subnets with public IP enabled)
     aws ecs create-service \
         --cluster $CLUSTER_NAME \
         --service-name $SERVICE_NAME \
@@ -172,7 +208,7 @@ else
         --desired-count 2 \
         --launch-type FARGATE \
         --platform-version LATEST \
-        --network-configuration "awsvpcConfiguration={subnets=[$PRIVATE_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=DISABLED}" \
+        --network-configuration "awsvpcConfiguration={subnets=[$PRIVATE_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
         --load-balancers "targetGroupArn=$TARGET_GROUP_ARN,containerName=api,containerPort=8000" \
         --health-check-grace-period-seconds 60 \
         --deployment-configuration "deploymentCircuitBreaker={enable=true,rollback=true},maximumPercent=200,minimumHealthyPercent=100" \
