@@ -75,8 +75,36 @@ so that I can include coaching guidance in meeting notes or share offline.
 
 ### Context Reference
 
-<!-- Will be filled by story-context workflow -->
+- Inline context (export feature)
 
 ### File List
 
-<!-- Will be filled during implementation -->
+**Modified:**
+- api-service/app/routers/conversations.py (added export endpoint and markdown generation)
+
+**Created:**
+- docs/validation/epic3_3-9_validation.md (validation guide)
+
+### Implementation Summary
+
+Implemented markdown export for conversations (PDF deferred):
+
+**Backend:**
+- GET /api/conversations/{id}/export endpoint
+- Markdown generation with conversation metadata
+- All messages with timestamps and role labels
+- Citations preserved and formatted
+- Filename sanitization for file system safety
+- Ownership verification (user_id check)
+- Returns downloadable .md file
+
+**Deferred:**
+- PDF export (requires additional libraries, future enhancement)
+- Frontend export UI (will be added in Story 3.11 UI Polish)
+
+**Acceptance Criteria Status:**
+- ⏸️ AC#1: Export options menu (frontend UI in Story 3.11)
+- ⏸️ AC#2: Export as PDF (deferred to future)
+- ✅ AC#3: Export as markdown with formatting, timestamps, citations
+
+**Note:** Backend complete and functional. Frontend UI will be added in Story 3.11.

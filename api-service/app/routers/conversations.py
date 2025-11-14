@@ -1,16 +1,19 @@
 """
 Story 3.3: Conversation List Sidebar
 Story 3.6: Conversation Sharing via Link
+Story 3.9: Conversation Export (Markdown)
 
 Conversation management endpoints for listing, viewing, and managing conversations.
 """
 
 import logging
 import uuid
+import re
 from typing import Optional
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -477,4 +480,132 @@ async def delete_conversation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete conversation: {str(e)}"
+        )
+
+
+# Story 3.9: Conversation Export
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to be safe for file systems."""
+    # Remove or replace invalid characters
+    filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    # Remove leading/trailing whitespace and dots
+    filename = filename.strip(). strip('.')
+    # Limit length
+    if len(filename) > 200:
+        filename = filename[:200]
+    return filename or "conversation"
+
+
+@router.get("/{conversation_id}/export")
+async def export_conversation(
+    conversation_id: str,
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    format: str = Query("markdown", description="Export format: markdown"),
+    db: Session = Depends(get_db)
+):
+    """
+    Export a conversation as markdown file.
+
+    Story 3.9 AC #3: Export as markdown with formatting, timestamps, and citations
+    Note: PDF export deferred to future enhancement
+
+    Args:
+        conversation_id: Conversation ID to export
+        user_id: User ID (for ownership verification)
+        format: Export format (currently only "markdown" supported)
+
+    Returns:
+        Downloadable markdown file
+    """
+    try:
+        # Verify format
+        if format not in ["markdown", "md", "text"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported export format: {format}. Only 'markdown' is supported."
+            )
+
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Get all messages ordered by creation time
+        messages = db.query(Message).filter(
+            Message.conversation_id == conversation_id
+        ).order_by(Message.created_at).all()
+
+        # Generate markdown content
+        markdown_lines = []
+
+        # Header
+        markdown_lines.append(f"# {conversation.title or 'Untitled Conversation'}\n")
+        markdown_lines.append(f"**Created:** {conversation.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
+        markdown_lines.append(f"**Last Updated:** {conversation.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
+        markdown_lines.append(f"**Messages:** {len(messages)}\n")
+        markdown_lines.append("\n---\n\n")
+
+        # Messages
+        for i, message in enumerate(messages, 1):
+            role_label = "**You:**" if message.role == "user" else "**AI Coach:**"
+            timestamp = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+
+            markdown_lines.append(f"## Message {i} - {role_label} ({timestamp})\n\n")
+            markdown_lines.append(f"{message.content}\n\n")
+
+            # Add citations if present (from assistant messages)
+            if message.role == "assistant" and message.citations:
+                markdown_lines.append("### Citations\n\n")
+                try:
+                    import json
+                    citations = json.loads(message.citations) if isinstance(message.citations, str) else message.citations
+                    for cite in citations:
+                        title = cite.get('book_title', 'Unknown')
+                        pages = cite.get('pages', 'N/A')
+                        markdown_lines.append(f"- **{title}** (Pages: {pages})\n")
+                except:
+                    markdown_lines.append(f"- {message.citations}\n")
+                markdown_lines.append("\n")
+
+            markdown_lines.append("---\n\n")
+
+        # Footer
+        markdown_lines.append("\n---\n\n")
+        markdown_lines.append("*Exported from PLC Coach - Powered by Solution Tree*\n")
+        markdown_lines.append(f"*Export Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}*\n")
+
+        # Combine into single markdown string
+        markdown_content = "".join(markdown_lines)
+
+        # Create filename
+        safe_title = sanitize_filename(conversation.title or "conversation")
+        date_str = conversation.created_at.strftime('%Y%m%d')
+        filename = f"{safe_title}_{date_str}.md"
+
+        logger.info(f"Exporting conversation {conversation_id} as markdown for user {user_id}")
+
+        # Return as downloadable file
+        return Response(
+            content=markdown_content.encode('utf-8'),
+            media_type="text/markdown",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": "text/markdown; charset=utf-8"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting conversation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export conversation: {str(e)}"
         )
