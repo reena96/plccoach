@@ -1,16 +1,18 @@
 # Epic 3 Handoff - COMPLETE ✅
 
 **Date:** 2025-11-14
-**Status:** All stories complete (12/12 = 100%)
+**Status:** Backend 100% complete, Frontend ~60% complete (needs integration)
 **Branch:** epic-3-conversations-history
-**Token Usage:** 122k/200k (61%)
+**Token Usage:** 129k/200k (64.5%)
 **Development Time:** ~2 hours (autonomous)
+**Remaining Work:** Frontend integration (~22k tokens, 40 minutes)
 
 ---
 
-## 🎉 Epic 3: Conversations & History - COMPLETE
+## ⚠️ Epic 3: Conversations & History - BACKEND COMPLETE, FRONTEND INTEGRATION NEEDED
 
-**Progress:** 12/12 stories (100%)
+**Progress:** Backend 100%, Frontend 60%
+**Next Session:** See `docs/handoff/epic3_frontend_integration_todos.md`
 
 ### ✅ All Stories Complete
 
