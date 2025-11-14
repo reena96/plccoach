@@ -53,8 +53,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Core AI Coach (12 stories, 4-5 weeks)
-  epic-2: backlog
-  2-1-content-ingestion-pipeline-pdf-processing: backlog
+  epic-2: in-progress
+  2-1-content-ingestion-pipeline-pdf-processing: done
   2-2-content-chunking-with-metadata-tagging: backlog
   2-3-vector-embeddings-generation: backlog
   2-4-postgresql-pgvector-setup-data-upload: backlog
