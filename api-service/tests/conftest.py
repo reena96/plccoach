@@ -15,6 +15,8 @@ os.environ['GOOGLE_CLIENT_SECRET'] = 'test-client-secret'
 from app.services.database import Base
 from app.models.user import User
 from app.models.session import Session as UserSession
+from app.models.conversation import Conversation
+from app.models.message import Message
 
 
 @pytest.fixture(scope="session")

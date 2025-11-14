@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: plccoach-db-test
     environment:
       - POSTGRES_USER=postgres
@@ -33,14 +33,15 @@ services:
       - DB_SECRET_NAME=plccoach-db-password
       - LOG_LEVEL=INFO
       - ENVIRONMENT=development
-      - SESSION_SECRET_KEY=dev-secret-key-for-oauth-state-change-in-production
-      # Real Google OAuth credentials (from .env)
-      - GOOGLE_CLIENT_ID=541993388762-fl23squpneq9soort2p0rs8cib2hqc5e.apps.googleusercontent.com
-      - GOOGLE_CLIENT_SECRET=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
-      - GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
-      # Clever OAuth (placeholder for now)
-      - CLEVER_CLIENT_ID=your-clever-client-id
-      - CLEVER_CLIENT_SECRET=your-clever-client-secret
+      # Session secret (loaded from .env in production)
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY:-dev-secret-key-for-local-dev-only}
+      # Google OAuth (loaded from .env - DO NOT hardcode secrets!)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8000/auth/google/callback}
+      # Clever OAuth (loaded from .env - DO NOT hardcode secrets!)
+      - CLEVER_CLIENT_ID=${CLEVER_CLIENT_ID:-your-clever-client-id}
+      - CLEVER_CLIENT_SECRET=${CLEVER_CLIENT_SECRET:-your-clever-client-secret}
       - CLEVER_REDIRECT_URI=http://localhost:8000/auth/clever/callback
     volumes:
       # Volume mounts for hot reload during development

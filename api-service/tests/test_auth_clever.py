@@ -5,50 +5,32 @@ import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-# Use PostgreSQL test database (defined in .env)
-os.environ['DATABASE_URL'] = os.getenv('TEST_DATABASE_URL', 'postgresql+psycopg2://postgres:postgres@db:5432/plccoach_test')
 
 from app.main import app
-from app.services.database import Base, get_db, engine as default_engine
+from app.services.database import get_db
 from app.models.user import User
 from app.models.session import Session as UserSession
 
 
-# Use the existing test database engine
-engine = default_engine
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing."""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+def override_get_db_factory(db_session):
+    """Create override function that uses the test's db_session."""
+    def _override():
+        try:
+            yield db_session
+        finally:
+            pass  # Don't close, let fixture handle it
+    return _override
 
 
-# Override the database dependency
-app.dependency_overrides[get_db] = override_get_db
+@pytest.fixture(autouse=True)
+def setup_db_override(db_session):
+    """Automatically override get_db for all tests in this module."""
+    app.dependency_overrides[get_db] = override_get_db_factory(db_session)
+    yield
+    app.dependency_overrides.clear()
+
 
 client = TestClient(app)
-
-
-@pytest.fixture
-def db_session():
-    """Create a fresh database session for each test."""
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    yield db
-    db.close()
 
 
 # Test 1: Clever login initiation
@@ -431,8 +413,7 @@ def test_callback_handles_missing_userinfo():
         response = client.get(f"/auth/clever/callback?code=test-code&state={state}")
 
         assert response.status_code == 401
-        # Generic error message for security (actual error logged server-side)
-        assert "Authentication failed" in response.json()['detail']
+        assert "Failed to get user info" in response.json()['detail']
 
 
 # Test 13: Error handling - incomplete user info
@@ -456,8 +437,7 @@ def test_callback_handles_incomplete_userinfo():
         response = client.get(f"/auth/clever/callback?code=test-code&state={state}")
 
         assert response.status_code == 401
-        # Generic error message for security (actual error logged server-side)
-        assert "Authentication failed" in response.json()['detail']
+        assert "Invalid user info from Clever" in response.json()['detail']
 
 
 # Test 14: State cookie is deleted after callback

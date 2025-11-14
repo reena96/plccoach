@@ -120,6 +120,9 @@ async def google_callback(
 
         return response
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (already have appropriate status/detail)
+        raise
     except Exception as e:
         # Log error details for debugging (server-side only)
         logger.error(f"OAuth authentication failed: {str(e)}", exc_info=True)
@@ -252,6 +255,9 @@ async def clever_callback(
 
         return response
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (already have appropriate status/detail)
+        raise
     except Exception as e:
         # Log error details for debugging (server-side only)
         logger.error(f"Clever OAuth authentication failed: {str(e)}", exc_info=True)

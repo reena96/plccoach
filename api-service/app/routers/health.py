@@ -1,6 +1,7 @@
 """Health check endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.services.database import get_db
 from app.services.cleanup_service import delete_expired_sessions
 from app.dependencies.rbac import require_admin
@@ -40,7 +41,7 @@ async def readiness_check(db: Session = Depends(get_db)):
     """
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return HealthResponse(
             status="ready",
             database="connected"

@@ -28,8 +28,7 @@ class User(Base):
 
     # Relationships
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
-    # TODO Epic 3: Uncomment when Conversation model is created
-    # conversations = relationship("Conversation", back_populates="user")
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 
     # Constraints
     __table_args__ = (

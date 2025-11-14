@@ -34,8 +34,9 @@ Thumbs.db
 *.md
 docs/
 
-# Alembic
-alembic.ini
+# Alembic - Note: alembic.ini and alembic/ directory are INCLUDED for migrations
+# Only exclude alembic versions cache
+alembic/__pycache__/
 
 # Environment
 .env
