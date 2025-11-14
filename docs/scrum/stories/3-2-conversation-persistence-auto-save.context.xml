@@ -1,0 +1,153 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.2</storyId>
+    <title>Conversation Persistence & Auto-Save</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-2-conversation-persistence-auto-save.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>my conversations saved automatically</iWant>
+    <soThat>I don't lose my coaching sessions if I close the browser</soThat>
+    <tasks>
+      - Create conversation on first message (AC: #1)
+        - Add logic to /coach/query to create conversation if conversation_id is None
+        - Generate new UUID for conversation
+        - Associate with user_id from request
+        - Return conversation_id in response for subsequent messages
+      - Save user message to database (AC: #1)
+        - Create Message record with role='user'
+        - Set conversation_id and content
+        - Save immediately after receiving request
+      - Save assistant response to database (AC: #1)
+        - Create Message record with role='assistant'
+        - Include citations in JSONB field
+        - Save after generation completes
+        - Use database transaction for atomicity
+      - Auto-generate conversation title (AC: #3)
+        - Extract first 50 characters from first user message
+        - Add "..." if truncated
+        - Set as conversation.title on creation
+        - Ensure title is editable (field nullable)
+      - Update conversation timestamps (AC: #4)
+        - Update conversations.updated_at on every new message
+        - Ensure ORDER BY updated_at DESC for conversation list
+        - Test with multiple rapid messages
+      - Testing and validation (AC: all)
+        - Unit test: conversation creation logic
+        - Unit test: title generation (< 50 chars, > 50 chars)
+        - Integration test: message save atomicity
+        - Integration test: timestamp updates correctly
+        - Validation guide created
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Auto-Save Messages:**
+       - Given I am in a chat conversation
+       - When I send a message
+       - Then both my message and the AI response are immediately saved to the database
+       - And if no conversation_id exists, a new conversation record is created
+       - And the conversation is associated with my user_id
+
+    2. **Session Persistence:**
+       - Given I close the browser and return later
+       - When I access the chat page
+       - Then I can continue from where I left off
+       - And all previous messages are loaded and displayed
+
+    3. **Auto-Generated Title:**
+       - Given a conversation is created
+       - When the first message is sent
+       - Then the conversation title is auto-generated from the first user question (first 50 characters)
+       - And the title can be edited later by the user
+
+    4. **Timestamp Updates:**
+       - Given I send multiple messages in quick succession
+       - When each message is processed
+       - Then the conversation updated_at timestamp is refreshed
+       - And the conversation appears at the top of my history list
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/epics/epic-3-conversations-history.md" title="Epic 3: Conversations & History" section="Story 3.2" snippet="Enable automatic conversation persistence. Save user and assistant messages immediately, create conversations on-demand, auto-generate titles from first message."/>
+      <doc path="docs/stories/1-2-database-schema-creation.md" title="Database Schema" section="Conversations & Messages" snippet="conversations table with title, status, timestamps. messages table with role, content, citations JSONB. CASCADE delete configured."/>
+      <doc path="docs/scrum/stories/3-1-multi-turn-conversation-context-management.md" title="Story 3.1 Learnings" section="Completion Notes" snippet="Database session pattern established. UUID handling working. HTTPException patterns for errors. X-User-Id header for auth (temporary)."/>
+    </docs>
+
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" lines="10-34" reason="SQLAlchemy model for conversations. Has updated_at with onupdate trigger. title field is nullable for editing."/>
+      <artifact path="api-service/app/models/message.py" kind="model" symbol="Message" lines="10-44" reason="SQLAlchemy model for messages. citations is JSONB field. role has CHECK constraint."/>
+      <artifact path="api-service/app/routers/coach.py" kind="router" symbol="query_coach" lines="75-190" reason="POST /api/coach/query endpoint. Already has db session and user_id. Needs conversation creation and message persistence logic."/>
+      <artifact path="api-service/app/services/database.py" kind="service" symbol="get_db" lines="106-122" reason="Database session dependency. Returns SQLAlchemy Session with proper lifecycle management."/>
+      <artifact path="api-service/app/services/generation_service.py" kind="service" symbol="get_conversation_context" lines="101-169" reason="Reference for conversation/message database queries. Shows UUID handling and session patterns."/>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="SQLAlchemy" version="2.0.25" reason="ORM for conversation and message persistence"/>
+        <package name="psycopg2-binary" version="2.9.9" reason="PostgreSQL adapter"/>
+        <package name="fastapi" version="0.109.0" reason="REST API framework"/>
+        <package name="pydantic" version="2.5.3" reason="Request/response validation"/>
+        <package name="pytest" version="7.4.4" reason="Testing framework"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - **Atomic Transactions:** MUST wrap user message + assistant message + conversation update in single database transaction for data integrity
+    - **Conversation Creation:** Create new conversation record if conversation_id is None/missing in request
+    - **Title Generation:** MUST use first 50 characters of first user message, append "..." if longer
+    - **UUID Generation:** Generate conversation UUID server-side using uuid4()
+    - **Timestamp Behavior:** SQLAlchemy's onupdate=datetime.utcnow handles automatic timestamp refresh
+    - **Return conversation_id:** MUST return conversation_id in response so frontend can track it for subsequent requests
+    - **No Manual Save:** Everything automatic - no user action required
+    - **Citations Persistence:** Store assistant message citations in JSONB field
+    - **Error Handling:** Use database transaction rollback on any failure during save
+  </constraints>
+
+  <interfaces>
+    <interface name="QueryResponse" kind="response_model" signature="QueryResponse(response: str, citations: list[Citation], domains: list[str], response_time_ms: int, token_usage: int, cost_usd: float, conversation_id: Optional[str] = None)" path="api-service/app/routers/coach.py" reason="MODIFY to add conversation_id field to response. Frontend needs this to track conversation."/>
+    <interface name="Conversation.create()" kind="SQLAlchemy_insert" signature="conversation = Conversation(id=uuid4(), user_id=user_id, title=title, status='active'); db.add(conversation); db.commit()" path="api-service/app/routers/coach.py" reason="NEW logic to add. Create conversation on first message."/>
+    <interface name="Message.create()" kind="SQLAlchemy_insert" signature="message = Message(id=uuid4(), conversation_id=conv_id, role=role, content=content, citations=citations_json); db.add(message); db.commit()" path="api-service/app/routers/coach.py" reason="NEW logic to add. Save user and assistant messages."/>
+    <interface name="db.refresh()" kind="SQLAlchemy_method" signature="db.refresh(conversation)" path="api-service/app/routers/coach.py" reason="Use after commit to get updated timestamp value from database."/>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest for all tests. Follow existing patterns in api-service/tests/.
+      - Unit tests: Mock database with fixtures
+      - Integration tests: Use real test database (SQLite in-memory)
+      - Test file naming: test_*.py
+      - Use database transactions in tests for isolation
+      - Verify timestamps, UUIDs, and atomicity
+    </standards>
+
+    <locations>
+      - api-service/tests/unit/test_conversation_persistence.py (create)
+      - api-service/tests/integration/test_message_autosave.py (create)
+      - api-service/tests/conftest.py (existing fixtures)
+    </locations>
+
+    <ideas>
+      - AC #1: Unit test conversation creation when conversation_id is None
+      - AC #1: Integration test user message saved immediately
+      - AC #1: Integration test assistant message saved with citations
+      - AC #1: Integration test atomic transaction (both messages or neither)
+      - AC #2: Integration test messages persist across requests (load from DB)
+      - AC #3: Unit test title generation with message < 50 chars
+      - AC #3: Unit test title generation with message > 50 chars (truncate + "...")
+      - AC #3: Unit test title generation with edge cases (empty, special chars)
+      - AC #4: Integration test updated_at refreshes on new message
+      - AC #4: Integration test multiple rapid messages all update timestamp
+      - Edge case: Concurrent message saves (transaction isolation)
+      - Edge case: Database failure during save (rollback verification)
+      - Edge case: Very long message content (>1000 chars)
+    </ideas>
+  </tests>
+</story-context>

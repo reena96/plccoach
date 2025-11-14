@@ -1,21 +1,28 @@
 """
 Story 2.8: Chat API Endpoints
 Story 3.1: Multi-Turn Conversation Context Management
+Story 3.2: Conversation Persistence & Auto-Save
 
-REST API endpoints for AI coach interactions with conversation history support.
+REST API endpoints for AI coach interactions with conversation history support
+and automatic message persistence.
 """
 
 import logging
 import time
 from typing import Optional
+from uuid import uuid4
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends, status, Header
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.services.retrieval_service import RetrievalService
 from app.services.generation_service import GenerationService
 from app.services.database import get_db
+from app.models.conversation import Conversation
+from app.models.message import Message
 from db_config import get_database_url
 import os
 
@@ -48,6 +55,7 @@ class QueryResponse(BaseModel):
     response_time_ms: int
     token_usage: int
     cost_usd: float
+    conversation_id: Optional[str] = Field(None, description="Conversation ID for this exchange")
 
 
 # Initialize services (singleton pattern)
@@ -107,6 +115,52 @@ async def query_coach(
         if request.conversation_id:
             logger.info(f"Conversation ID provided: {request.conversation_id}")
 
+        # Step 0: Create conversation if needed (Story 3.2)
+        conversation_id = request.conversation_id
+        if not conversation_id and x_user_id:
+            try:
+                # Create new conversation
+                # Generate title from first 50 chars of query
+                title = request.query[:50]
+                if len(request.query) > 50:
+                    title += "..."
+
+                from uuid import UUID
+                conversation = Conversation(
+                    id=uuid4(),
+                    user_id=UUID(x_user_id),  # Convert string to UUID
+                    title=title,
+                    status='active'
+                )
+                db.add(conversation)
+                db.flush()  # Get ID without committing transaction yet
+                conversation_id = str(conversation.id)
+                logger.info(f"Created new conversation: {conversation_id}")
+            except SQLAlchemyError as e:
+                logger.error(f"Failed to create conversation: {e}")
+                db.rollback()
+                # Continue without persistence for now
+                conversation_id = None
+
+        # Step 0.5: Save user message (Story 3.2)
+        user_message_id = None
+        if conversation_id and x_user_id:
+            try:
+                from uuid import UUID
+                user_message = Message(
+                    id=uuid4(),
+                    conversation_id=UUID(conversation_id),  # Convert string to UUID
+                    role='user',
+                    content=request.query
+                )
+                db.add(user_message)
+                db.flush()  # Save but don't commit yet
+                user_message_id = str(user_message.id)
+                logger.info(f"Saved user message: {user_message_id}")
+            except SQLAlchemyError as e:
+                logger.error(f"Failed to save user message: {e}")
+                db.rollback()
+
         # Step 1: Retrieve relevant chunks
         retrieval_result = retrieval_service.retrieve(request.query, final_k=7)
 
@@ -156,6 +210,30 @@ async def query_coach(
                 detail="Failed to generate response"
             )
 
+        # Step 3: Save assistant message (Story 3.2)
+        if conversation_id and x_user_id:
+            try:
+                from uuid import UUID
+                assistant_message = Message(
+                    id=uuid4(),
+                    conversation_id=UUID(conversation_id),
+                    role='assistant',
+                    content=generation_result['response'],
+                    citations=generation_result['citations'],  # Store citations as JSONB
+                    input_tokens=generation_result.get('token_usage', 0),
+                    cost_usd=generation_result.get('cost_usd', 0.0)
+                )
+                db.add(assistant_message)
+
+                # Update conversation timestamp (onupdate will handle this automatically)
+                # Commit the transaction (conversation + user message + assistant message)
+                db.commit()
+                logger.info(f"Saved assistant message and committed transaction")
+            except SQLAlchemyError as e:
+                logger.error(f"Failed to save assistant message: {e}")
+                db.rollback()
+                # Don't fail the request - response was generated successfully
+
         # Calculate response time
         response_time_ms = int((time.time() - start_time) * 1000)
 
@@ -171,7 +249,8 @@ async def query_coach(
             domains=domains,
             response_time_ms=response_time_ms,
             token_usage=generation_result['token_usage'],
-            cost_usd=generation_result['cost_usd']
+            cost_usd=generation_result['cost_usd'],
+            conversation_id=conversation_id  # Return conversation_id (Story 3.2)
         )
 
     except HTTPException:
