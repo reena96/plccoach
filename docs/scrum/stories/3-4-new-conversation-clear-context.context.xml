@@ -1,0 +1,94 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.4</storyId>
+    <title>New Conversation & Clear Context</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-4-new-conversation-clear-context.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>to start a fresh conversation</iWant>
+    <soThat>I can ask about a different topic without confusing context</soThat>
+    <tasks>
+      - Add "New Conversation" button functionality (AC: #1) - Button UI already exists from Story 3.3
+      - Implement new conversation creation logic: Generate UUID, clear chat, reset state, show welcome message
+      - Defer database record creation until first message sent (lazy creation pattern)
+      - Update sidebar to reflect new conversation after first message
+      - Handle navigation from past conversations (preserve navigation ability)
+      - Implement empty conversation cleanup (filter sidebar to message_count > 0)
+      - Testing and validation guide
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **New Conversation Button**: Clicking clears chat, shows welcome message, sets new conversation_id for subsequent messages, previous conversation remains in sidebar
+    2. **Navigation Preservation**: Can start new conversation from any view, can navigate back to previous conversations
+    3. **Empty Conversation Cleanup**: Empty conversations (no messages) not shown in sidebar, optional background cleanup
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/epics/epic-3-conversations-history.md" title="Epic 3" section="Story 3.4" snippet="New Conversation button clears context, lazy conversation creation (no DB record until first message), sidebar refresh after creation"/>
+      <doc path="docs/scrum/stories/3-3-conversation-list-sidebar.md" title="Story 3.3 Completion" section="Completion Notes" snippet="New Conversation button UI created (placeholder onNewConversation prop), ConversationList component structure, sidebar refresh pattern"/>
+    </docs>
+
+    <code>
+      <artifact path="frontend/src/components/conversation/ConversationList.tsx" kind="component" symbol="ConversationList" lines="18-195" reason="Button UI exists with onNewConversation prop - need to wire up functionality"/>
+      <artifact path="api-service/app/routers/coach.py" kind="router" symbol="query_coach" lines="1-269" reason="Conversation creation logic on first message (if conversation_id=None, create new). Reuse this pattern."/>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" lines="10-34" reason="Conversation model - auto-generates UUID. Frontend can pre-generate UUID or let server create."/>
+      <artifact path="frontend/src/hooks/useConversations.ts" kind="hook" symbol="useConversations" lines="1-56" reason="React Query hook for conversations - will need to refetch/invalidate after new conversation created"/>
+    </code>
+
+    <dependencies>
+      <javascript>
+        <package name="react" reason="State management for clearing conversation"/>
+        <package name="@tanstack/react-query" reason="Cache invalidation after new conversation"/>
+        <package name="uuid" reason="Client-side UUID generation (if adopting this pattern)"/>
+      </javascript>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - **CRITICAL**: Button UI already exists from Story 3.3 - only need to implement handler logic
+    - **Lazy Creation**: Do NOT create database record on button click - only on first message sent
+    - **State Reset**: Clear messages array, conversation_id, any cached context on new conversation
+    - **Welcome Message**: Re-display onboarding content when chat clears
+    - **Sidebar Sync**: Refresh/invalidate conversation list query after first message of new conversation
+    - **Sidebar Filtering**: Empty conversations (message_count=0) already filtered by Story 3.3 endpoint
+    - **UUID Strategy**: Either client-generates UUID or uses null (server creates on first message)
+    - **Navigation Preservation**: User can click between conversations - new conversation doesn't break this
+  </constraints>
+
+  <interfaces>
+    <interface name="onNewConversation handler" kind="React callback" signature="() => void" path="frontend/src/components/conversation/ConversationList.tsx" reason="Button click handler - implement to clear state and reset conversation"/>
+    <interface name="Conversation state management" kind="React context/state" signature="{ conversationId: string | null, messages: Message[], setConversationId, clearMessages }" path="frontend/src/contexts/ConversationContext.tsx or chat page component" reason="Manage active conversation state"/>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Frontend: Manual testing (no test framework configured yet - defer to Story 3.12)
+      Backend: No new backend changes needed (reuse existing conversation creation from Story 3.2)
+    </standards>
+
+    <locations>
+      - Manual validation guide: docs/validation/epic3_3-4_validation.md
+    </locations>
+
+    <ideas>
+      - AC #1: Clicking "New Conversation" clears chat messages display
+      - AC #1: Welcome message and example questions appear after click
+      - AC #1: conversation_id state reset to null
+      - AC #1: Sending first message in new conversation creates DB record
+      - AC #1: Previous conversation remains visible in sidebar
+      - AC #2: Can navigate back to previous conversation after starting new one
+      - AC #3: Sidebar only shows conversations with messages (message_count > 0 filter)
+      - Edge case: Rapid clicking "New Conversation" multiple times
+      - Edge case: Starting new conversation then immediately navigating to old one
+      - Integration: Verify sidebar refreshes/invalidates cache after first message
+    </ideas>
+  </tests>
+</story-context>
