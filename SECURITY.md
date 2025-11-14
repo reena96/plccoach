@@ -9,7 +9,7 @@
 1. **Rotate Google OAuth Credentials**
    - Go to [Google Cloud Console](https://console.cloud.google.com)
    - Navigate to: APIs & Services → Credentials
-   - Delete the OAuth 2.0 Client ID: `541993388762-fl23squpneq9soort2p0rs8cib2hqc5e`
+   - Delete the OAuth 2.0 Client ID that was exposed
    - Create new OAuth credentials
    - Update `.env` file with new credentials (DO NOT commit!)
 

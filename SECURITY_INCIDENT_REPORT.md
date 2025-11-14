@@ -15,14 +15,14 @@ During a security audit, Google OAuth client secret was discovered hardcoded in 
 ## Affected Secrets
 
 ### 1. Google OAuth Client Secret (CRITICAL)
-- **Value**: `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`
-- **Client ID**: `541993388762-fl23squpneq9soort2p0rs8cib2hqc5e.apps.googleusercontent.com`
+- **Value**: `GOCSPX-****************************` (REDACTED - already rotated)
+- **Client ID**: `[REDACTED].apps.googleusercontent.com`
 - **Location**: `api-service/docker-compose.yml` (line 39)
 - **Committed**: YES (visible in git history)
 - **Exposure**: Public git repository (if pushed to GitHub/GitLab)
 
 ### 2. Session Secret (LOW)
-- **Value**: `dev-secret-key-for-oauth-state-change-in-production`
+- **Value**: `dev-secret-key-****` (REDACTED)
 - **Location**: `api-service/docker-compose.yml` (line 36)
 - **Risk**: Low (development only, needs rotation for production anyway)
 
@@ -86,7 +86,7 @@ During a security audit, Google OAuth client secret was discovered hardcoded in 
    ```
    1. Go to: https://console.cloud.google.com/apis/credentials
    2. Select project: PLC Coach (or your project name)
-   3. Find OAuth 2.0 Client ID: 541993388762-fl23squpneq9soort2p0rs8cib2hqc5e
+   3. Find the OAuth 2.0 Client ID that was exposed (check git history if needed)
    4. Click "Delete" or "Regenerate Secret"
    5. Create new OAuth 2.0 credentials:
       - Application type: Web application
