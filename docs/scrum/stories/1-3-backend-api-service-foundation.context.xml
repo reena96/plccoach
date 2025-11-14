@@ -1,0 +1,179 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.3</storyId>
+    <title>Backend API Service Foundation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-3-backend-api-service-foundation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>backend developer</asA>
+    <iWant>to create the FastAPI application structure</iWant>
+    <soThat>we have a foundation for building API endpoints</soThat>
+    <tasks>
+- Create FastAPI application structure (AC: #1)
+- Implement database connection service (AC: #3)
+- Implement health check endpoints (AC: #2)
+- Configure CORS middleware (AC: #4)
+- Implement structured logging (AC: #5)
+- Set up Docker containerization (AC: #6)
+- Configure environment management (AC: #7)
+- Testing and validation (AC: all)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Directory Structure Created: api-service/app/ with routers/, services/, models/, main.py, config.py
+2. Health Check Endpoints: GET /health (200 OK), GET /ready (200 when DB accessible, 503 otherwise)
+3. Database Connection Pooling: SQLAlchemy with pool_size=20, pool_pre_ping=True, dependency injection
+4. CORS Middleware: Configured for frontend origins, credentials, methods, headers
+5. Structured Logging: JSON format, CloudWatch compatible, Request ID middleware
+6. Docker Container: Dockerfile builds, service runs in container, connects to RDS
+7. Environment Variables: AWS Secrets Manager (production), .env file (local), no hardcoded credentials
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.3: Backend API Service Foundation</section>
+        <snippet>Create FastAPI application structure with routers, services, models directories. Implement health check endpoints, database connection pooling, CORS middleware, structured logging, and Docker containerization.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/1-2-database-schema-creation.md</path>
+        <title>Story 1.2: Database Schema Creation</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Database connection utility (db_config.py) created with AWS Secrets Manager integration. SQLAlchemy models available in models/ directory. Connection pooling configured for 20 connections. Testing patterns established.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/db_config.py</path>
+        <kind>service</kind>
+        <symbol>get_database_url, create_db_engine, get_session_maker</symbol>
+        <lines>1-119</lines>
+        <reason>Existing database configuration utility with AWS Secrets Manager integration and connection pooling - refactor into app/services/database.py</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/models/user.py</path>
+        <kind>model</kind>
+        <symbol>User</symbol>
+        <lines>1-43</lines>
+        <reason>User SQLAlchemy model - move to app/models/user.py and update imports</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/models/session.py</path>
+        <kind>model</kind>
+        <symbol>Session</symbol>
+        <lines>all</lines>
+        <reason>Session SQLAlchemy model - move to app/models/session.py</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/models/conversation.py</path>
+        <kind>model</kind>
+        <symbol>Conversation</symbol>
+        <lines>all</lines>
+        <reason>Conversation SQLAlchemy model - move to app/models/conversation.py</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/models/message.py</path>
+        <kind>model</kind>
+        <symbol>Message</symbol>
+        <lines>all</lines>
+        <reason>Message SQLAlchemy model - move to app/models/message.py</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/migrations/test_initial_schema.py</path>
+        <kind>test</kind>
+        <symbol>test_tables_created, test_indexes_created</symbol>
+        <lines>all</lines>
+        <reason>Testing patterns for database connections and validation - follow for FastAPI integration tests</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.109.0" />
+        <package name="uvicorn" version="0.27.0" extras="standard" />
+        <package name="pydantic" version="2.5.3" />
+        <package name="pydantic-settings" version="2.1.0" />
+        <package name="SQLAlchemy" version="2.0.25" />
+        <package name="psycopg2-binary" version="2.9.9" />
+        <package name="alembic" version="1.13.1" />
+        <package name="boto3" version="1.34.34" />
+        <package name="python-dotenv" version="1.0.0" />
+        <package name="pytest" version="7.4.4" />
+        <package name="pytest-asyncio" version="0.23.3" />
+        <package name="pytest-cov" version="4.1.0" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- FastAPI with Uvicorn ASGI server (Python 3.11+)
+- SQLAlchemy 2.0 for ORM and database interactions
+- Dependency injection pattern for database sessions (FastAPI Depends)
+- Middleware-based request/response handling
+- Environment-based configuration using Pydantic Settings
+- All paths must be project-relative in code
+- UUID primary keys for all database tables (already established in Story 1.2)
+- Connection pooling: 20 connections per service (already configured)
+- Timezone-aware UTC timestamps
+- Testing with pytest and FastAPI TestClient
+- Docker as primary development method with volume mounts for hot reload
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GET /health</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /health -> HealthResponse {status: str, service: str, version: str}</signature>
+      <path>app/routers/health.py</path>
+    </interface>
+    <interface>
+      <name>GET /ready</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /ready -> HealthResponse {status: str, database: str} | 503 Service Unavailable</signature>
+      <path>app/routers/health.py</path>
+    </interface>
+    <interface>
+      <name>get_db</name>
+      <kind>Dependency injection function</kind>
+      <signature>def get_db() -> Generator[Session, None, None]</signature>
+      <path>app/services/database.py</path>
+    </interface>
+    <interface>
+      <name>get_database_url</name>
+      <kind>Configuration function</kind>
+      <signature>def get_database_url(use_env: bool = True) -> str</signature>
+      <path>api-service/db_config.py (refactor to app/services/database.py)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Use pytest with FastAPI TestClient for endpoint testing. Test database connections with dependency overrides. Integration tests should verify health endpoints, database connectivity, and CORS headers. Validate JSON logging output format. Test Docker container builds and health checks. Follow existing testing patterns from Story 1.2 (pytest.ini configuration with coverage reporting, markers for test types).
+    </standards>
+    <locations>
+api-service/tests/
+api-service/tests/test_health.py (new)
+api-service/tests/test_database.py (new)
+    </locations>
+    <ideas>
+- AC#1: Test FastAPI app initialization and directory structure
+- AC#2: Test GET /health returns 200 with correct response format
+- AC#2: Test GET /ready returns 200 when DB connected, 503 when DB unavailable
+- AC#3: Test database connection pooling configuration (pool_size=20)
+- AC#3: Test dependency injection function get_db() yields session
+- AC#4: Test CORS headers in response (Access-Control-Allow-Origin, etc.)
+- AC#5: Test structured logging outputs JSON format with request ID
+- AC#6: Test Docker container builds successfully
+- AC#6: Test container can connect to database
+- AC#7: Test environment variable loading from .env file
+- AC#7: Test config validation with Pydantic Settings
+    </ideas>
+  </tests>
+</story-context>

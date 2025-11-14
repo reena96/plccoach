@@ -1,0 +1,257 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.8</storyId>
+    <title>User Profile & Role Management</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-8-user-profile-role-management.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>logged-in user</asA>
+    <iWant>to view my profile information</iWant>
+    <soThat>I can see my name, email, role, and organization</soThat>
+    <tasks>
+      - Task 1: Implement GET /auth/me Endpoint (AC: 1, 2, 8)
+      - Task 2: Add get_user_by_id() to AuthService (AC: 1)
+      - Task 3: Create RBAC Dependency for Admin Access (AC: 4, 9)
+      - Task 4: Implement GET /admin/users Endpoint (AC: 3, 4)
+      - Task 5: Add list_users() to AuthService (AC: 3)
+      - Task 6: Implement PATCH /admin/users/:id Endpoint (AC: 5, 6, 10)
+      - Task 7: Add update_user_role() to AuthService (AC: 5)
+      - Task 8: Create Pydantic Schemas (AC: 1, 3, 6)
+      - Task 9: Update Frontend AuthContext checkAuth() (AC: 7)
+      - Task 10: Write Tests for GET /auth/me (AC: 1, 2)
+      - Task 11: Write Tests for Admin Endpoints (AC: 3, 4, 5, 6, 10)
+      - Task 12: Update API Documentation (AC: 1, 3, 5)
+      - Task 13: Integration Testing (AC: 7)
+      - Task 14: Manual Cleanup Endpoint Authentication (AC: 9)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - AC1: GET /auth/me Endpoint - Returns 200 with user profile (id, email, name, role, organization, sso_provider, created_at, last_login) for valid session
+    - AC2: Unauthenticated Access - Returns 401 for missing/expired session
+    - AC3: Admin User List Endpoint - GET /admin/users returns 200 with paginated user list (page, limit params) ordered by created_at DESC
+    - AC4: Admin-Only Access to User List - Returns 403 for non-admin users
+    - AC5: Admin Role Update Endpoint - PATCH /admin/users/:id updates role, returns 200 with updated user, logs change
+    - AC6: Role Validation - Returns 400 for invalid role (not "educator", "coach", "admin")
+    - AC7: Frontend AuthContext Integration - checkAuth() calls GET /auth/me, sets isAuthenticated and user state, restores auth on page refresh
+    - AC8: Session Dependency Validation - All endpoints use get_current_session() from Story 1.6 for session validation
+    - AC9: Role-Based Access Control Dependency - require_admin() dependency validates session and checks role == "admin", returns 403 if not admin
+    - AC10: Audit Logging for Role Changes - Role changes logged with admin ID/email, target user ID/email, old/new role, timestamp, IP address
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      - path: docs/epics/epic-1-foundation-authentication.md
+        title: Epic 1 - Foundation & Authentication
+        section: Story 1.8 - User Profile & Role Management
+        snippet: Implements GET /auth/me endpoint for user profile retrieval, admin endpoints for user management and role updates, and RBAC middleware for admin-only endpoints.
+
+      - path: docs/scrum/stories/1-6-session-management-logout.md
+        title: Story 1.6 - Session Management & Logout
+        section: Dev Notes - Session Management Infrastructure
+        snippet: Established get_current_session() dependency for protected endpoints. Sessions validated for expiry and inactivity timeout (30 min). Session cookies are httpOnly, managed by backend.
+
+      - path: docs/scrum/stories/1-7-frontend-application-shell.md
+        title: Story 1.7 - Frontend Application Shell
+        section: Dev Notes - AuthContext Placeholder
+        snippet: AuthContext exists with checkAuth() placeholder (lines 25-34) ready for implementation. Frontend uses httpOnly cookies, no manual token storage. API client configured with withCredentials:true.
+
+      - path: docs/scrum/stories/1-2-database-schema-creation.md
+        title: Story 1.2 - Database Schema Creation
+        section: Database Tables - users table
+        snippet: users table contains: id (UUID), email, name, role (educator/coach/admin), organization_id, sso_provider, sso_id, created_at, last_login. Sessions table links to users via user_id foreign key.
+    </docs>
+
+    <code>
+      - path: api-service/app/dependencies/session.py
+        kind: dependency
+        symbol: get_current_session
+        lines: 17-73
+        reason: Required for AC1, AC8 - Validates session, checks expiry/inactivity, updates last_accessed_at. Must be reused in GET /auth/me endpoint.
+
+      - path: api-service/app/dependencies/session.py
+        kind: dependency
+        symbol: get_optional_session
+        lines: 76-92
+        reason: Optional session validation for endpoints that work with or without auth. Returns None if invalid, does not raise exception.
+
+      - path: api-service/app/services/auth_service.py
+        kind: service
+        symbol: get_or_create_user
+        lines: 42-99
+        reason: Existing user creation/retrieval pattern. New function get_user_by_id() should follow similar database query pattern.
+
+      - path: api-service/app/services/auth_service.py
+        kind: service
+        symbol: get_session_by_id
+        lines: 132-143
+        reason: Pattern for database query by ID. Similar pattern needed for get_user_by_id() in Task 2.
+
+      - path: api-service/app/routers/auth.py
+        kind: router
+        symbol: logout
+        lines: 259-298
+        reason: Existing auth router. GET /auth/me endpoint should be added here (Task 1). Shows pattern for using session validation dependencies.
+
+      - path: api-service/app/routers/health.py
+        kind: router
+        symbol: cleanup_sessions_manual
+        lines: TBD
+        reason: Manual cleanup endpoint needs require_admin() dependency added (Task 14). Technical debt from Story 1.7.
+
+      - path: frontend/src/lib/auth.tsx
+        kind: context
+        symbol: checkAuth
+        lines: 25-34
+        reason: Placeholder implementation to be replaced in Task 9. Must call GET /auth/me and update user/isAuthenticated state.
+
+      - path: frontend/src/lib/api-client.ts
+        kind: client
+        symbol: apiClient
+        lines: ALL
+        reason: Axios instance with withCredentials:true for session cookies. Use for GET /auth/me call in checkAuth().
+
+      - path: api-service/tests/test_session_management.py
+        kind: test
+        symbol: ALL
+        lines: ALL
+        reason: Testing pattern for session-dependent endpoints. Shows how to mock sessions, test 401 responses, and validate session behavior.
+
+      - path: api-service/tests/conftest.py
+        kind: test_fixture
+        symbol: client, db
+        lines: ALL
+        reason: Test fixtures for FastAPI TestClient and database session. Required for all new tests in Tasks 10-11.
+    </code>
+
+    <dependencies>
+      python:
+        - fastapi==0.109.0 (web framework)
+        - pydantic==2.5.3 (request/response validation)
+        - SQLAlchemy==2.0.25 (ORM)
+        - authlib==1.3.0 (OAuth - already used)
+        - pytest==7.4.4 (testing)
+        - pytest-asyncio==0.23.3 (async testing)
+
+      typescript:
+        - axios==1.13.2 (HTTP client for GET /auth/me)
+        - react==19.2.0 (AuthContext provider)
+        - @tanstack/react-query==5.90.8 (optional for caching /auth/me)
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use existing get_current_session() dependency from api-service/app/dependencies/session.py for all protected endpoints (AC8)
+    - Do NOT create new session validation logic - reuse Story 1.6 implementation
+    - Frontend must NOT store tokens manually - httpOnly cookies only (security constraint from Story 1.7)
+    - All datetime fields must be timezone-aware (datetime.now(timezone.utc)) for PostgreSQL consistency
+    - Role values MUST be enum-validated: "educator", "coach", "admin" only (AC6)
+    - Admin endpoints must use require_admin() dependency for RBAC (AC9)
+    - Audit logs for role changes must be JSON-structured for CloudWatch ingestion (AC10)
+    - GET /auth/me must exclude sensitive fields (sso_id) from response (security best practice)
+    - Pydantic schemas required for request validation and response serialization (FastAPI pattern)
+    - All tests must achieve 100% AC coverage (quality standard from Story 1.6)
+    - Use existing test fixtures from api-service/tests/conftest.py
+    - Frontend checkAuth() must handle both success (200) and error (401) cases gracefully
+    - Pagination defaults: limit=50, page=1 for GET /admin/users (AC3)
+  </constraints>
+
+  <interfaces>
+    - name: GET /auth/me
+      kind: REST endpoint
+      signature: GET /auth/me → 200 {id, email, name, role, organization, sso_provider, created_at, last_login} | 401 Unauthorized
+      path: api-service/app/routers/auth.py (to be added)
+
+    - name: GET /admin/users
+      kind: REST endpoint
+      signature: GET /admin/users?page=1&limit=50 → 200 {users: [...], total, page, limit} | 403 Forbidden (non-admin)
+      path: api-service/app/routers/admin.py (to be created)
+
+    - name: PATCH /admin/users/:id
+      kind: REST endpoint
+      signature: PATCH /admin/users/{user_id} {role: str} → 200 {updated user} | 400 (invalid role) | 403 (non-admin) | 404 (user not found)
+      path: api-service/app/routers/admin.py (to be created)
+
+    - name: get_current_session
+      kind: FastAPI dependency
+      signature: async get_current_session(request: Request, db: Session) → UserSession | raises HTTPException(401)
+      path: api-service/app/dependencies/session.py:17-73
+
+    - name: require_admin
+      kind: FastAPI dependency
+      signature: async require_admin(session: UserSession = Depends(get_current_session)) → UserSession | raises HTTPException(403)
+      path: api-service/app/dependencies/rbac.py (to be created)
+
+    - name: get_user_by_id
+      kind: Service function
+      signature: def get_user_by_id(db: Session, user_id: uuid.UUID) → Optional[User]
+      path: api-service/app/services/auth_service.py (to be added)
+
+    - name: list_users
+      kind: Service function
+      signature: def list_users(db: Session, offset: int, limit: int) → List[User]
+      path: api-service/app/services/auth_service.py (to be added)
+
+    - name: update_user_role
+      kind: Service function
+      signature: def update_user_role(db: Session, user_id: uuid.UUID, new_role: str) → Optional[User]
+      path: api-service/app/services/auth_service.py (to be added)
+
+    - name: UserProfileResponse
+      kind: Pydantic schema
+      signature: class UserProfileResponse(BaseModel): id, email, name, role, organization, sso_provider, created_at, last_login
+      path: api-service/app/schemas/user.py (to be created)
+
+    - name: UpdateRoleRequest
+      kind: Pydantic schema
+      signature: class UpdateRoleRequest(BaseModel): role: Literal["educator", "coach", "admin"]
+      path: api-service/app/schemas/user.py (to be created)
+
+    - name: checkAuth
+      kind: Frontend function
+      signature: async checkAuth() → void (updates user and isAuthenticated state)
+      path: frontend/src/lib/auth.tsx:25-34 (to be implemented)
+  </interfaces>
+
+  <tests>
+    <standards>
+      FastAPI testing with pytest and TestClient. Tests located in api-service/tests/. Use fixtures from conftest.py (client, db). Mock external dependencies with @patch. Aim for 100% AC coverage. Test both success and error cases (401, 403, 400, 404). Verify timezone-aware datetime handling. Check audit logging with logger assertions.
+    </standards>
+
+    <locations>
+      - api-service/tests/test_auth_me.py (new - for GET /auth/me tests)
+      - api-service/tests/test_admin_users.py (new - for admin endpoint tests)
+      - api-service/tests/conftest.py (existing fixtures - reuse)
+      - frontend/src/lib/__tests__/auth.test.tsx (future - manual testing acceptable for MVP)
+    </locations>
+
+    <ideas>
+      AC1: Test GET /auth/me returns 200 with correct user profile for valid session
+      AC1: Test GET /auth/me excludes sso_id field (security)
+      AC1: Test GET /auth/me datetime fields are timezone-aware and serialize correctly
+      AC2: Test GET /auth/me returns 401 for missing session cookie
+      AC2: Test GET /auth/me returns 401 for expired session
+      AC2: Test GET /auth/me returns 401 for invalid session ID
+      AC3: Test GET /admin/users returns 200 with user list for admin
+      AC3: Test GET /admin/users pagination works (page=2, limit=10)
+      AC3: Test GET /admin/users orders by created_at DESC
+      AC4: Test GET /admin/users returns 403 for educator role
+      AC4: Test GET /admin/users returns 403 for coach role
+      AC5: Test PATCH /admin/users/:id updates role and returns 200 for admin
+      AC5: Test PATCH /admin/users/:id role change takes effect (verify in DB)
+      AC6: Test PATCH /admin/users/:id returns 400 for invalid role "superadmin"
+      AC6: Test PATCH /admin/users/:id returns 404 for non-existent user ID
+      AC6: Test PATCH /admin/users/:id returns 403 for non-admin user
+      AC10: Test PATCH /admin/users/:id logs role change with admin info, target user, old/new role
+      AC7: Integration test - frontend checkAuth() calls GET /auth/me on mount
+      AC7: Integration test - auth state restored after page refresh
+      AC9: Test require_admin() dependency returns session for admin user
+      AC9: Test require_admin() dependency raises 403 for educator user
+    </ideas>
+  </tests>
+</story-context>

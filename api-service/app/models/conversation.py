@@ -1,0 +1,34 @@
+"""Conversation model for PLC Coach."""
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from app.services.database import Base
+
+
+class Conversation(Base):
+    """Conversation model representing chat sessions between users and the AI coach."""
+
+    __tablename__ = 'conversations'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id'),
+        nullable=False,
+        index=True
+    )
+    title = Column(String, nullable=True)
+    status = Column(String, nullable=False, default='active')  # active, archived, deleted
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    share_token = Column(String, unique=True, nullable=True, index=True)
+    share_enabled = Column(Boolean, nullable=False, default=False)
+
+    # Relationships
+    user = relationship("User", back_populates="conversations")
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Conversation(id={self.id}, user_id={self.user_id}, title='{self.title}')>"

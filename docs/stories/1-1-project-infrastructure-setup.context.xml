@@ -1,0 +1,120 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.1</storyId>
+    <title>Project Infrastructure Setup</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-12</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-1-project-infrastructure-setup.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>DevOps engineer</asA>
+    <iWant>to provision AWS infrastructure and set up deployment pipeline</iWant>
+    <soThat>the team can deploy and run the application in a production-ready environment</soThat>
+    <tasks>
+      - Set up Infrastructure as Code (AC: #3)
+      - Provision Network Infrastructure (AC: #1)
+      - Provision Security Infrastructure (AC: #1)
+      - Provision Database Infrastructure (AC: #1)
+      - Provision Compute Infrastructure (AC: #1)
+      - Provision Storage Infrastructure (AC: #1)
+      - Configure Monitoring and Logging (AC: #1, #4)
+      - Set up CI/CD Pipeline (AC: #2)
+      - Documentation (AC: all)
+      - Testing and Validation (AC: all)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. AWS Infrastructure Resources Created and Configured:
+       - VPC with public and private subnets (10.0.0.0/16)
+       - ECS Fargate cluster for container orchestration
+       - RDS PostgreSQL 15 instance (Multi-AZ for production)
+       - S3 buckets (content, exports, backups)
+       - CloudFront CDN for frontend assets
+       - Application Load Balancer with SSL/TLS
+       - CloudWatch log groups and basic metrics
+       - Secrets Manager for credentials
+
+    2. CI/CD Pipeline Configured:
+       - Automated builds on push to main branch
+       - Docker image creation and push to ECR
+       - Automated deployment to ECS Fargate
+       - Blue-green deployment strategy
+
+    3. Infrastructure as Code:
+       - All infrastructure defined as code (Terraform or CloudFormation/CDK)
+
+    4. Monitoring and Alerting:
+       - Basic monitoring configured in CloudWatch
+       - Basic alerting configured in CloudWatch
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.1: Project Infrastructure Setup</section>
+        <snippet>Foundation story establishing AWS infrastructure and CI/CD pipeline for the PLC Coach application. Includes VPC, ECS Fargate, RDS PostgreSQL, S3, CloudFront, ALB, and GitHub Actions deployment.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- No existing code - this is the foundation story -->
+    </code>
+    <dependencies>
+      <!-- Dependencies will be determined during implementation based on IaC tool choice (Terraform or AWS CDK) -->
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use AWS Well-Architected Framework principles
+    - Follow least privilege security model for all IAM roles and security groups
+    - Enable encryption at rest using AWS KMS for RDS and S3
+    - Enable encryption in transit using SSL/TLS for all communication
+    - Multi-AZ deployment for high availability (RDS, subnets)
+    - Separate public/private subnet architecture
+    - CloudWatch log retention: 90 days
+    - VPC CIDR: 10.0.0.0/16 with /24 subnets per AZ
+    - Use ECS Fargate for serverless container orchestration
+    - RDS PostgreSQL 15 with Multi-AZ enabled
+    - Blue-green deployment strategy for zero-downtime deployments
+  </constraints>
+
+  <interfaces>
+    <!-- No interfaces yet - this is the foundation story that creates the infrastructure -->
+  </interfaces>
+
+  <tests>
+    <standards>
+      Infrastructure validation using infrastructure testing tools (e.g., terraform validate, AWS CloudFormation linter, or CDK synth).
+      Security validation using AWS Config rules or security scanning tools.
+      Deployment pipeline smoke tests to verify end-to-end functionality.
+      Resource validation to ensure all required resources are created with correct configuration.
+    </standards>
+    <locations>
+      - infrastructure/ or terraform/ or cdk/ (depending on IaC tool choice)
+      - .github/workflows/ (CI/CD pipeline definitions)
+      - tests/infrastructure/ (infrastructure test scripts)
+    </locations>
+    <ideas>
+      - AC#1: Test VPC creation with correct CIDR and subnet configuration
+      - AC#1: Verify ECS Fargate cluster is operational
+      - AC#1: Validate RDS PostgreSQL 15 instance is Multi-AZ and encrypted
+      - AC#1: Confirm S3 buckets exist with encryption enabled
+      - AC#1: Test CloudFront distribution serves content correctly
+      - AC#1: Verify ALB is configured with SSL/TLS certificate
+      - AC#1: Validate CloudWatch log groups are created with 90-day retention
+      - AC#1: Test Secrets Manager stores and retrieves credentials securely
+      - AC#2: Test GitHub Actions workflow triggers on main branch push
+      - AC#2: Verify Docker images build and push to ECR successfully
+      - AC#2: Test automated deployment to ECS Fargate
+      - AC#2: Validate blue-green deployment strategy works correctly
+      - AC#3: Verify all infrastructure is defined in IaC (no manual resources)
+      - AC#4: Test CloudWatch monitoring collects metrics correctly
+      - AC#4: Verify CloudWatch alarms trigger appropriately
+    </ideas>
+  </tests>
+</story-context>

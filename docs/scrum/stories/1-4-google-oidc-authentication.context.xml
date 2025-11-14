@@ -1,0 +1,266 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.4</storyId>
+    <title>Google OIDC Authentication</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-4-google-oidc-authentication.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>to log in using my Google account</iWant>
+    <soThat>I can access the PLC Coach without creating a separate account</soThat>
+    <tasks>
+      - Task 1: Install and configure OAuth library (AC: #1, #2)
+      - Task 2: Implement Google login initiation endpoint (AC: #1)
+      - Task 3: Implement Google OAuth callback endpoint (AC: #2, #3, #4, #5)
+      - Task 4: Implement JIT user provisioning service (AC: #3, #4)
+      - Task 5: Implement session creation service (AC: #5)
+      - Task 6: Implement session cookie management (AC: #5, #6)
+      - Task 7: Configure Google OAuth credentials (AC: #7)
+      - Task 8: Integration testing (AC: all)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Google OAuth Redirect:
+       - GET /auth/google/login endpoint redirects user to Google OAuth consent screen
+       - CSRF protection implemented using state parameter (random token)
+       - Scopes requested: openid, email, profile
+
+    2. Google OAuth Callback:
+       - GET /auth/google/callback endpoint receives authorization code
+       - Validates state parameter matches (CSRF protection)
+       - Exchanges authorization code for tokens (access_token, id_token)
+       - Verifies JWT ID token signature and claims
+
+    3. JIT User Provisioning (New Users):
+       - User profile data extracted from Google (email, name, Google user ID)
+       - New user record created in users table with email, name, role='educator', sso_provider='google', sso_id=Google user ID, created_at timestamp
+
+    4. Existing User Login:
+       - For returning users (sso_provider='google', sso_id matches), update last_login timestamp and name/email if changed
+       - No duplicate user creation
+
+    5. Session Creation:
+       - Secure session created in sessions table with user_id, expires_at (24 hours), timestamps
+       - Session cookie set with httpOnly=True, secure=True (production), sameSite='lax', max_age=24 hours
+
+    6. Post-Login Redirect:
+       - User redirected to dashboard (/dashboard) after successful authentication
+       - Session cookie automatically sent with subsequent requests
+
+    7. Configuration Management:
+       - Google Client ID and Client Secret loaded from AWS Secrets Manager
+       - OAuth redirect URI configured (http://localhost:8000/auth/google/callback for dev)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.4: Google OIDC Authentication</section>
+        <snippet>Implement Google OAuth 2.0 / OIDC flow with JIT user provisioning, session creation, and secure cookie management. Use authlib library for OAuth implementation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-3-backend-api-service-foundation.md</path>
+        <title>Story 1.3: Backend API Service Foundation</title>
+        <section>Completion Notes & Learnings</section>
+        <snippet>FastAPI foundation complete with middleware stack, database service with get_db() dependency injection, Pydantic Settings v2 config, AWS Secrets Manager integration ready. Auth router placeholder exists at app/routers/auth.py.</snippet>
+      </doc>
+      <doc>
+        <path>docs/07-handoff/epic-1-story-1-3-completion-handoff.md</path>
+        <title>Epic 1 Story 1.3 Completion Handoff</title>
+        <section>Development Environment & Key Patterns</section>
+        <snippet>Python 3.14 with FastAPI 0.121.2, Pydantic 2.12.4, SQLAlchemy 2.0.25. Docker primary development method. All models in app/models/, services in app/services/, routers in app/routers/.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/app/routers/auth.py</path>
+        <kind>router</kind>
+        <symbol>router (APIRouter)</symbol>
+        <lines>1-8</lines>
+        <reason>Empty placeholder for authentication endpoints - implement /auth/google/login and /auth/google/callback here</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/models/user.py</path>
+        <kind>model</kind>
+        <symbol>User</symbol>
+        <lines>10-42</lines>
+        <reason>User model with sso_provider, sso_id, role, last_login fields ready for JIT provisioning. UUID primary key, email unique index, role check constraint.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/models/session.py</path>
+        <kind>model</kind>
+        <symbol>Session</symbol>
+        <lines>10-29</lines>
+        <reason>Session model with user_id foreign key, expires_at, created_at, last_accessed_at timestamps. UUID primary key, CASCADE delete on user removal.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/database.py</path>
+        <kind>service</kind>
+        <symbol>get_db(), get_secret()</symbol>
+        <lines>20-117</lines>
+        <reason>Database service with get_db() dependency injection for SQLAlchemy sessions. get_secret() function for AWS Secrets Manager integration (lines 20-49) - extend for Google OAuth credentials.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/config.py</path>
+        <kind>config</kind>
+        <symbol>Settings</symbol>
+        <lines>6-42</lines>
+        <reason>Pydantic Settings v2 configuration class using model_config = SettingsConfigDict. Add Google OAuth settings here (google_client_id, google_client_secret, google_redirect_uri).</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/test_health.py</path>
+        <kind>test</kind>
+        <symbol>test_health_endpoint, test_cors_headers</symbol>
+        <lines>1-75</lines>
+        <reason>Example test patterns using FastAPI TestClient, dependency overrides, response validation. Follow these patterns for OAuth endpoint tests.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.109.0">Web framework (upgrade to 0.121.2 for Python 3.14 compatibility)</package>
+        <package name="uvicorn" version="0.27.0">ASGI server</package>
+        <package name="pydantic" version="2.5.3">Data validation (upgrade to 2.12.4)</package>
+        <package name="pydantic-settings" version="2.1.0">Environment config</package>
+        <package name="SQLAlchemy" version="2.0.25">ORM for database</package>
+        <package name="psycopg2-binary" version="2.9.9">PostgreSQL driver</package>
+        <package name="boto3" version="1.34.34">AWS SDK for Secrets Manager</package>
+        <package name="pytest" version="7.4.4">Testing framework</package>
+        <package name="pytest-asyncio" version="0.23.3">Async test support</package>
+        <package name="python-dotenv" version="1.0.0">Environment variable loading</package>
+        <package name="authlib" version="REQUIRED">OAuth 2.0 / OIDC library - MUST BE INSTALLED</package>
+        <package name="httpx" version="REQUIRED">HTTP client for authlib OAuth - MUST BE INSTALLED</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use authlib library for OAuth 2.0 / OIDC implementation (industry-standard, well-maintained)
+    - Follow Pydantic Settings v2 pattern: Use model_config = SettingsConfigDict (NOT class Config)
+    - Follow SQLAlchemy 2.0 patterns: Import from sqlalchemy.orm (NOT sqlalchemy.ext.declarative)
+    - Store Google Client ID and Secret in AWS Secrets Manager (production) and .env file (development)
+    - CSRF protection required: Generate random state parameter, store temporarily, validate on callback
+    - JWT token verification required: Validate signature, issuer (accounts.google.com), audience (client_id), expiry
+    - Session expiry: 24 hours from creation (session timeout/refresh handled in Story 1.6)
+    - Cookie security: httpOnly=True, secure=True (production only), sameSite='lax', domain not set (same-origin)
+    - JIT provisioning: Create new user with role='educator' (default) if sso_provider='google' + sso_id not found
+    - Existing user update: Update last_login, name, email on each login (in case Google profile changed)
+    - Follow established patterns from Story 1.3: Use get_db() dependency injection, JSON logging, request ID middleware
+    - Testing: 100% test pass requirement, use FastAPI TestClient, mock Google OAuth responses
+    - Docker development: Use docker-compose up for hot reload, run tests in container
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GET /auth/google/login</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        GET /auth/google/login
+        Response: 302 Redirect to Google OAuth consent screen
+        Sets state cookie (httpOnly, secure, max_age=600 seconds)
+      </signature>
+      <path>api-service/app/routers/auth.py</path>
+    </interface>
+    <interface>
+      <name>GET /auth/google/callback</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        GET /auth/google/callback?code={auth_code}&amp;state={state_token}
+        Validates state parameter
+        Exchanges code for tokens
+        Creates/updates user record
+        Creates session
+        Sets session cookie (httpOnly, secure, sameSite=lax, max_age=86400)
+        Response: 302 Redirect to /dashboard
+      </signature>
+      <path>api-service/app/routers/auth.py</path>
+    </interface>
+    <interface>
+      <name>get_or_create_user(db, email, name, sso_provider, sso_id)</name>
+      <kind>service function</kind>
+      <signature>
+        def get_or_create_user(
+            db: Session,
+            email: str,
+            name: str,
+            sso_provider: str,
+            sso_id: str
+        ) -> User:
+            """Create new user or update existing user from SSO data."""
+      </signature>
+      <path>api-service/app/services/auth_service.py</path>
+    </interface>
+    <interface>
+      <name>create_session(db, user_id)</name>
+      <kind>service function</kind>
+      <signature>
+        def create_session(db: Session, user_id: UUID) -> Session:
+            """Create new session for user with 24-hour expiry."""
+      </signature>
+      <path>api-service/app/services/auth_service.py</path>
+    </interface>
+    <interface>
+      <name>User model</name>
+      <kind>SQLAlchemy model</kind>
+      <signature>
+        User(id: UUID, email: str, name: str, role: str, organization_id: UUID | None,
+             sso_provider: str | None, sso_id: str | None, created_at: datetime, last_login: datetime | None)
+      </signature>
+      <path>api-service/app/models/user.py</path>
+    </interface>
+    <interface>
+      <name>Session model</name>
+      <kind>SQLAlchemy model</kind>
+      <signature>
+        Session(id: UUID, user_id: UUID, expires_at: datetime, created_at: datetime, last_accessed_at: datetime)
+      </signature>
+      <path>api-service/app/models/session.py</path>
+    </interface>
+    <interface>
+      <name>Google OIDC Discovery</name>
+      <kind>External API</kind>
+      <signature>
+        GET https://accounts.google.com/.well-known/openid-configuration
+        Returns: authorization_endpoint, token_endpoint, jwks_uri, issuer
+      </signature>
+      <path>External - Google OAuth API</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with FastAPI TestClient for endpoint testing. Mock external OAuth calls using pytest-httpx or responses library. Test database operations using dependency overrides (see tests/test_health.py for pattern). All tests must pass (100% requirement). Test files location: api-service/tests/. Run tests in Docker: docker-compose exec api pytest tests/ -v --no-cov
+    </standards>
+    <locations>
+      api-service/tests/
+      api-service/tests/test_auth_google.py (create for this story)
+    </locations>
+    <ideas>
+      <test ac="1">Test GET /auth/google/login returns 302 redirect with correct Google OAuth URL containing state, scopes (openid email profile), redirect_uri</test>
+      <test ac="1">Test state parameter is random UUID and stored in cookie</test>
+      <test ac="2">Test GET /auth/google/callback validates state parameter matches cookie</test>
+      <test ac="2">Test callback exchanges code for tokens using authlib (mock Google token endpoint)</test>
+      <test ac="2">Test JWT ID token signature verification (mock jwks_uri)</test>
+      <test ac="2">Test JWT claims validation (issuer, audience, expiry)</test>
+      <test ac="3">Test new user JIT provisioning creates User record with correct fields (email, name, role=educator, sso_provider=google, sso_id)</test>
+      <test ac="4">Test existing user login updates last_login timestamp</test>
+      <test ac="4">Test existing user login updates name/email if changed in Google profile</test>
+      <test ac="4">Test no duplicate user creation (sso_provider + sso_id uniqueness)</test>
+      <test ac="5">Test session creation with correct expires_at (24 hours), created_at, last_accessed_at</test>
+      <test ac="5">Test session cookie attributes (httpOnly=True, secure=True in prod, sameSite=lax, max_age=86400)</test>
+      <test ac="6">Test post-login redirect to /dashboard</test>
+      <test ac="7">Test Google OAuth config loaded from environment (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)</test>
+      <test>Test error case: invalid authorization code returns 401</test>
+      <test>Test error case: state parameter mismatch returns 403</test>
+      <test>Test error case: expired state token (>10 minutes old) returns 403</test>
+      <test>Test error case: JWT verification failure returns 401</test>
+    </ideas>
+  </tests>
+</story-context>
