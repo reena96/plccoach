@@ -104,10 +104,14 @@ Content:
         citations = []
 
         # Look for citation patterns in the response
-        # Pattern: [Book Title] by [Authors], Chapter [X]: [Title], pp. [XX-XX]
-        citation_pattern = r'\[([^\]]+)\]\s+by\s+([^,]+),\s+Chapter\s+(\d+):\s+([^,]+),\s+pp\.\s+(\d+-\d+)'
+        # Try two patterns: with asterisks (*Book*) and without
+        pattern_with_asterisks = r'[-•]\s*\*(.+)\*\s+by\s+(.+?),\s+Chapter\s+(\d+):\s+([^,]+),\s+pp\.\s+(\d+-\d+)'
+        pattern_without_asterisks = r'[-•]\s*(.+)\s+by\s+([A-Z][\w\s,\.]+),\s+Chapter\s+(\d+):\s+([^,]+),\s+pp\.\s+(\d+-\d+)'
 
-        matches = re.finditer(citation_pattern, response_text)
+        # Try both patterns and combine matches
+        matches = list(re.finditer(pattern_with_asterisks, response_text))
+        if not matches:
+            matches = list(re.finditer(pattern_without_asterisks, response_text))
 
         for match in matches:
             book_title = match.group(1)

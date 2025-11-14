@@ -444,17 +444,33 @@
                 `<span class="domain-badge">${d}</span>`
             ).join('');
 
-            // Display citations
-            const citationsHTML = data.citations.map((cite, i) => `
-                <div class="citation-item">
-                    <div class="citation-title">[${i + 1}] ${cite.book_title}</div>
-                    <div class="citation-details">
-                        by ${cite.authors} •
-                        Chapter ${cite.chapter}: ${cite.chapter_title} •
-                        pp. ${cite.pages}
+            // Display citations with clickable links
+            const citationsHTML = data.citations.map((cite, i) => {
+                const bookQuery = encodeURIComponent(cite.book_title);
+                const amazonUrl = `https://www.amazon.com/s?k=${bookQuery}`;
+                const googleScholarUrl = `https://scholar.google.com/scholar?q=${bookQuery}`;
+
+                return `
+                    <div class="citation-item">
+                        <div class="citation-title">
+                            [${i + 1}] ${cite.book_title}
+                            <div style="margin-top: 8px; font-size: 0.85rem;">
+                                <a href="${amazonUrl}" target="_blank" style="color: #667eea; text-decoration: none; margin-right: 15px;">
+                                    🛒 Find on Amazon
+                                </a>
+                                <a href="${googleScholarUrl}" target="_blank" style="color: #667eea; text-decoration: none;">
+                                    🎓 Google Scholar
+                                </a>
+                            </div>
+                        </div>
+                        <div class="citation-details">
+                            by ${cite.authors} •
+                            Chapter ${cite.chapter}: ${cite.chapter_title} •
+                            pp. ${cite.pages}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             responseArea.innerHTML = `
                 <div class="success-message">
