@@ -34,15 +34,12 @@ def upgrade() -> None:
         sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('NOW()'))
     )
 
-    # Create ivfflat index for fast similarity search
-    # Note: Index must be created after data is loaded for best performance
-    # We'll create it in the upload script after bulk insert
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS embeddings_embedding_idx
-        ON embeddings
-        USING ivfflat (embedding vector_cosine_ops)
-        WITH (lists = 100)
-    """)
+    # Note: Index creation skipped for 3072-dimensional vectors
+    # pgvector 0.5.0+ supports higher dimensions, but current version has 2000 limit
+    # Similarity search will still work via sequential scan for testing
+    # TODO: Upgrade to pgvector 0.5.0+ and create index with:
+    #   CREATE INDEX embeddings_embedding_idx ON embeddings
+    #   USING hnsw (embedding vector_cosine_ops)
 
     # Create index on metadata for filtering
     op.create_index(
