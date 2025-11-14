@@ -1,7 +1,10 @@
 """FastAPI application initialization."""
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -105,5 +108,15 @@ async def root():
         "service": settings.app_name,
         "version": settings.app_version,
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
+        "test_ui": "/test"
     }
+
+
+@app.get("/test")
+async def test_ui():
+    """Serve the test UI page."""
+    test_file = Path(__file__).parent.parent / "test-coach.html"
+    if test_file.exists():
+        return FileResponse(test_file)
+    return {"error": "Test page not found"}

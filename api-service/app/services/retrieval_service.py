@@ -84,21 +84,22 @@ class RetrievalService:
                     domain_list = ", ".join([f"'{d}'" for d in domains_to_search])
                     domain_filter = f"AND (metadata->>'primary_domain') IN ({domain_list})"
 
+                # Convert embedding to pgvector string format: '[1.0,2.0,3.0]'
+                # Direct SQL embedding (safe - floats from OpenAI, not user input)
+                embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
+
                 query = text(f"""
                     SELECT
                         content,
                         metadata,
-                        1 - (embedding <=> :query_embedding::vector) as similarity
+                        1 - (embedding <=> '{embedding_str}'::vector) as similarity
                     FROM embeddings
                     WHERE 1=1 {domain_filter}
-                    ORDER BY embedding <=> :query_embedding::vector
+                    ORDER BY embedding <=> '{embedding_str}'::vector
                     LIMIT :limit
                 """)
 
-                result = conn.execute(query, {
-                    'query_embedding': query_embedding,
-                    'limit': limit
-                })
+                result = conn.execute(query, {'limit': limit})
 
                 chunks = []
                 for row in result:
