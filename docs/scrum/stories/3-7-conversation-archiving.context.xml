@@ -1,0 +1,42 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.7</storyId>
+    <title>Conversation Archiving</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-7-conversation-archiving.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>to archive old conversations</iWant>
+    <soThat>my active conversation list stays focused on current work</soThat>
+    <tasks>
+      - Backend: PATCH /api/conversations/{id}/archive (update status to 'archived')
+      - Backend: PATCH /api/conversations/{id}/unarchive (update status to 'active')
+      - Filter archived conversations from sidebar (status='active' only)
+      - Frontend: Archive button, archived view (DEFER to Story 3.11)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Archive Conversation:** PATCH endpoint updates status to 'archived', conversation disappears from main list
+    2. **Unarchive Conversation:** PATCH endpoint updates status to 'active', conversation reappears
+    3. **Archived View:** Frontend shows archived conversations separately (deferred)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" line="23" reason="Status field already exists (active/archived/deleted)"/>
+      <artifact path="api-service/app/routers/conversations.py" kind="router" symbol="conversations" reason="Add archive/unarchive endpoints"/>
+    </code>
+  </artifacts>
+
+  <constraints>
+    - Status field already supports 'archived' value
+    - Archived conversations filtered from GET /api/conversations (already implemented in Story 3.3)
+    - Only conversation owner can archive/unarchive
+  </constraints>
+</story-context>

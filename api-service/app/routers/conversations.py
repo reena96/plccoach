@@ -325,3 +325,94 @@ async def disable_sharing(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable sharing: {str(e)}"
         )
+
+
+# Story 3.7: Conversation Archiving
+@router.patch("/{conversation_id}/archive")
+async def archive_conversation(
+    conversation_id: str,
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Archive a conversation.
+
+    AC #1: Update status to 'archived', remove from main list
+    """
+    try:
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Archive conversation
+        conversation.status = 'archived'
+        conversation.updated_at = datetime.utcnow()
+
+        db.commit()
+
+        logger.info(f"Conversation {conversation_id} archived by user {user_id}")
+
+        return {"message": "Conversation archived successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error archiving conversation: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to archive conversation: {str(e)}"
+        )
+
+
+@router.patch("/{conversation_id}/unarchive")
+async def unarchive_conversation(
+    conversation_id: str,
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Unarchive a conversation.
+
+    AC #2: Update status to 'active', add back to main list
+    """
+    try:
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Unarchive conversation
+        conversation.status = 'active'
+        conversation.updated_at = datetime.utcnow()
+
+        db.commit()
+
+        logger.info(f"Conversation {conversation_id} unarchived by user {user_id}")
+
+        return {"message": "Conversation unarchived successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error unarchiving conversation: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to unarchive conversation: {str(e)}"
+        )
