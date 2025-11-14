@@ -66,22 +66,25 @@ create_or_update_secret \
 echo "✅ Google OAuth secret configured"
 echo ""
 
-# Clever SSO Credentials
-echo "📝 Clever SSO Configuration"
-echo "----------------------------"
+# Clever SSO Credentials (Optional)
+echo "📝 Clever SSO Configuration (Optional)"
+echo "---------------------------------------"
 echo "Get these from: https://apps.clever.com/"
 echo ""
-read -p "Clever Client ID: " CLEVER_CLIENT_ID
-read -sp "Clever Client Secret: " CLEVER_CLIENT_SECRET
-echo ""
-echo ""
+read -p "Do you want to configure Clever SSO? (y/N): " SETUP_CLEVER
+SETUP_CLEVER=${SETUP_CLEVER:-N}
 
-if [ -z "$CLEVER_CLIENT_ID" ] || [ -z "$CLEVER_CLIENT_SECRET" ]; then
-    echo "❌ Clever SSO credentials are required"
-    exit 1
-fi
+if [[ "$SETUP_CLEVER" =~ ^[Yy] ]]; then
+    read -p "Clever Client ID: " CLEVER_CLIENT_ID
+    read -sp "Clever Client Secret: " CLEVER_CLIENT_SECRET
+    echo ""
+    echo ""
 
-CLEVER_SECRET=$(cat <<EOF
+    if [ -z "$CLEVER_CLIENT_ID" ] || [ -z "$CLEVER_CLIENT_SECRET" ]; then
+        echo "⚠️  Clever credentials incomplete - skipping Clever SSO setup"
+        echo "   You can add it later by re-running this script"
+    else
+        CLEVER_SECRET=$(cat <<EOF
 {
   "CLEVER_CLIENT_ID": "$CLEVER_CLIENT_ID",
   "CLEVER_CLIENT_SECRET": "$CLEVER_CLIENT_SECRET"
@@ -89,12 +92,18 @@ CLEVER_SECRET=$(cat <<EOF
 EOF
 )
 
-create_or_update_secret \
-    "plccoach/production/clever-sso" \
-    "$CLEVER_SECRET" \
-    "Clever SSO credentials for PLC Coach"
+        create_or_update_secret \
+            "plccoach/production/clever-sso" \
+            "$CLEVER_SECRET" \
+            "Clever SSO credentials for PLC Coach"
 
-echo "✅ Clever SSO secret configured"
+        echo "✅ Clever SSO secret configured"
+    fi
+else
+    echo "⏭️  Skipping Clever SSO configuration"
+    echo "   Clever login will not be available in production"
+    echo "   You can add it later by re-running this script"
+fi
 echo ""
 
 # Session Secret
@@ -136,39 +145,55 @@ create_or_update_secret \
 echo "✅ Session secret configured"
 echo ""
 
-# Verify all secrets exist
+# Verify required secrets exist
 echo "🔍 Verifying secrets..."
 echo "------------------------"
 
-SECRETS=(
+REQUIRED_SECRETS=(
     "plccoach-db-password"
     "plccoach/production/google-oauth"
-    "plccoach/production/clever-sso"
     "plccoach/production/session"
 )
 
-ALL_EXIST=true
-for secret in "${SECRETS[@]}"; do
+OPTIONAL_SECRETS=(
+    "plccoach/production/clever-sso"
+)
+
+ALL_REQUIRED_EXIST=true
+for secret in "${REQUIRED_SECRETS[@]}"; do
     if aws secretsmanager describe-secret --secret-id "$secret" --region "$AWS_REGION" &> /dev/null; then
         ARN=$(aws secretsmanager describe-secret --secret-id "$secret" --region "$AWS_REGION" --query 'ARN' --output text)
-        echo "  ✅ $secret"
+        echo "  ✅ $secret (required)"
         echo "     ARN: $ARN"
     else
-        echo "  ❌ $secret - NOT FOUND"
-        ALL_EXIST=false
+        echo "  ❌ $secret - NOT FOUND (required)"
+        ALL_REQUIRED_EXIST=false
+    fi
+done
+
+for secret in "${OPTIONAL_SECRETS[@]}"; do
+    if aws secretsmanager describe-secret --secret-id "$secret" --region "$AWS_REGION" &> /dev/null; then
+        ARN=$(aws secretsmanager describe-secret --secret-id "$secret" --region "$AWS_REGION" --query 'ARN' --output text)
+        echo "  ✅ $secret (optional)"
+        echo "     ARN: $ARN"
+    else
+        echo "  ⏭️  $secret - NOT CONFIGURED (optional - Clever SSO will not work)"
     fi
 done
 
 echo ""
 
-if [ "$ALL_EXIST" = true ]; then
-    echo "🎉 All secrets configured successfully!"
+if [ "$ALL_REQUIRED_EXIST" = true ]; then
+    echo "🎉 All required secrets configured successfully!"
     echo ""
     echo "📋 Next steps:"
-    echo "  1. Update OAuth redirect URIs to production URLs"
-    echo "  2. Run ./scripts/deploy-ecs-service.sh to deploy the API"
-    echo "  3. Run ./scripts/deploy-frontend.sh to deploy the frontend"
+    echo "  1. Update Google OAuth redirect URI to production URL"
+    if aws secretsmanager describe-secret --secret-id "plccoach/production/clever-sso" --region "$AWS_REGION" &> /dev/null; then
+        echo "  2. Update Clever SSO redirect URI to production URL"
+    fi
+    echo "  3. Run ./scripts/deploy-ecs-service.sh to deploy the API"
+    echo "  4. Run ./scripts/deploy-frontend.sh to deploy the frontend"
 else
-    echo "❌ Some secrets are missing. Please check the errors above."
+    echo "❌ Some required secrets are missing. Please check the errors above."
     exit 1
 fi
