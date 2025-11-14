@@ -1,18 +1,21 @@
 """
 Story 2.8: Chat API Endpoints
+Story 3.1: Multi-Turn Conversation Context Management
 
-REST API endpoints for AI coach interactions.
+REST API endpoints for AI coach interactions with conversation history support.
 """
 
 import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Header
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.services.retrieval_service import RetrievalService
 from app.services.generation_service import GenerationService
+from app.services.database import get_db
 from db_config import get_database_url
 import os
 
@@ -73,18 +76,23 @@ def get_generation_service() -> GenerationService:
 async def query_coach(
     request: QueryRequest,
     retrieval_service: RetrievalService = Depends(get_retrieval_service),
-    generation_service: GenerationService = Depends(get_generation_service)
+    generation_service: GenerationService = Depends(get_generation_service),
+    db: Session = Depends(get_db),
+    x_user_id: Optional[str] = Header(None, description="User ID for conversation context (TODO: replace with proper auth)")
 ):
     """Query the AI coach with a question.
 
     This endpoint orchestrates the full RAG pipeline:
     1. Retrieves relevant content chunks (Story 2.6)
     2. Generates a response with citations (Story 2.7)
+    3. Includes conversation history if conversation_id provided (Story 3.1)
 
     Args:
-        request: Query request with user question
+        request: Query request with user question and optional conversation_id
         retrieval_service: Injected retrieval service
         generation_service: Injected generation service
+        db: Database session
+        x_user_id: User ID from header (TODO: replace with proper authentication)
 
     Returns:
         QueryResponse with answer, citations, and metadata
@@ -96,6 +104,8 @@ async def query_coach(
 
     try:
         logger.info(f"Received query: {request.query[:100]}...")
+        if request.conversation_id:
+            logger.info(f"Conversation ID provided: {request.conversation_id}")
 
         # Step 1: Retrieve relevant chunks
         retrieval_result = retrieval_service.retrieve(request.query, final_k=7)
@@ -110,10 +120,33 @@ async def query_coach(
         chunks = retrieval_result['chunks']
         classification = retrieval_result['classification']
 
+        # Step 1.5: Load conversation context if conversation_id provided
+        conversation_history = None
+        if request.conversation_id and x_user_id:
+            try:
+                conversation_history = generation_service.get_conversation_context(
+                    conversation_id=request.conversation_id,
+                    user_id=x_user_id,
+                    db_session=db
+                )
+                logger.info(f"Loaded conversation context: {len(conversation_history)} chars")
+            except ValueError as e:
+                # Conversation not found or unauthorized
+                logger.warning(f"Conversation context load failed: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=str(e)
+                )
+            except Exception as e:
+                # Non-fatal: continue without conversation context
+                logger.error(f"Failed to load conversation context: {e}")
+                conversation_history = None
+
         # Step 2: Generate response
         generation_result = generation_service.generate(
             query=request.query,
-            retrieved_chunks=chunks
+            retrieved_chunks=chunks,
+            conversation_history=conversation_history
         )
 
         if 'error' in generation_result:

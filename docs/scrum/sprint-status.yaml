@@ -69,8 +69,8 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Conversations & History (12 stories, 2-3 weeks)
-  epic-3: backlog
-  3-1-multi-turn-conversation-context-management: backlog
+  epic-3: in-progress
+  3-1-multi-turn-conversation-context-management: review
   3-2-conversation-persistence-auto-save: backlog
   3-3-conversation-list-sidebar: backlog
   3-4-new-conversation-clear-context: backlog

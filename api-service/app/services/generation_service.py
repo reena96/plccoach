@@ -1,15 +1,22 @@
 """
 Story 2.7: Response Generation with Citations
+Story 3.1: Multi-Turn Conversation Context Management
 
 Generates AI responses with transparent citations using GPT-4o.
+Supports conversation history for multi-turn context-aware responses.
 """
 
 import logging
 from typing import Dict, List, Optional
+from uuid import UUID
 import re
 
 from openai import OpenAI
+from sqlalchemy.orm import Session
 import os
+
+from app.models.conversation import Conversation
+from app.models.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +98,76 @@ Content:
 
         return "\n".join(context_parts)
 
+    def get_conversation_context(
+        self,
+        conversation_id: str,
+        user_id: str,
+        db_session: Session
+    ) -> str:
+        """Retrieve and format conversation history for context.
+
+        Loads the last 10 messages from the conversation and formats them
+        as User/Assistant dialog for inclusion in the LLM prompt.
+
+        Args:
+            conversation_id: UUID of the conversation
+            user_id: UUID of the user (for authorization)
+            db_session: SQLAlchemy database session
+
+        Returns:
+            Formatted conversation history string, or empty string if no messages
+
+        Raises:
+            ValueError: If conversation doesn't exist or doesn't belong to user
+        """
+        try:
+            # Convert string IDs to UUID
+            conv_uuid = UUID(conversation_id)
+            user_uuid = UUID(user_id)
+
+            # Validate conversation exists and belongs to user
+            conversation = db_session.query(Conversation).filter(
+                Conversation.id == conv_uuid,
+                Conversation.user_id == user_uuid
+            ).first()
+
+            if not conversation:
+                raise ValueError(f"Conversation {conversation_id} not found or access denied")
+
+            # Load last 10 messages, ordered by created_at DESC
+            messages = db_session.query(Message).filter(
+                Message.conversation_id == conv_uuid
+            ).order_by(Message.created_at.desc()).limit(10).all()
+
+            if not messages:
+                # Empty conversation - no context to provide
+                return ""
+
+            # Reverse to get chronological order (oldest to newest)
+            messages = list(reversed(messages))
+
+            # Format as User/Assistant dialog
+            context_lines = []
+            for msg in messages:
+                if msg.role == "user":
+                    context_lines.append(f"User: {msg.content}")
+                elif msg.role == "assistant":
+                    context_lines.append(f"Assistant: {msg.content}")
+                # Skip 'system' role messages - not part of conversation flow
+
+            conversation_history = "\n\n".join(context_lines)
+
+            logger.info(f"Loaded {len(messages)} messages for conversation {conversation_id}")
+
+            return conversation_history
+
+        except ValueError as e:
+            # Re-raise authorization/not found errors
+            raise
+        except Exception as e:
+            logger.error(f"Failed to load conversation context: {e}")
+            raise ValueError(f"Failed to load conversation context: {str(e)}")
+
     def _extract_citations(self, response_text: str, chunks: List[Dict]) -> List[Dict]:
         """Extract and validate citations from the response.
 
@@ -143,17 +220,25 @@ Content:
 
         return citations
 
-    def generate(self, query: str, retrieved_chunks: List[Dict]) -> Dict:
+    def generate(
+        self,
+        query: str,
+        retrieved_chunks: List[Dict],
+        conversation_history: Optional[str] = None
+    ) -> Dict:
         """Generate a response with citations.
 
         Args:
             query: User query
             retrieved_chunks: Retrieved chunks from Story 2.6
+            conversation_history: Optional formatted conversation history for context
 
         Returns:
             Dictionary with response, citations, and metadata
         """
         logger.info(f"Generating response for query: {query[:100]}...")
+        if conversation_history:
+            logger.info(f"Including conversation history ({len(conversation_history)} chars)")
 
         try:
             # Format context from retrieved chunks
@@ -169,8 +254,16 @@ Content:
                     'cost_usd': 0.0
                 }
 
-            # Build prompt
-            user_prompt = f"""Based on the provided sources, answer this question from a PLC educator:
+            # Build prompt with optional conversation history
+            prompt_parts = []
+
+            # Add conversation history if provided
+            if conversation_history:
+                prompt_parts.append("Previous conversation:\n" + conversation_history)
+                prompt_parts.append("\n---\n")
+
+            # Add main query and sources
+            prompt_parts.append(f"""Based on the provided sources, answer this question from a PLC educator:
 
 Question: {query}
 
@@ -181,7 +274,12 @@ Remember to:
 1. Answer directly and concisely (2-3 paragraphs)
 2. Include key takeaways as bullet points
 3. Add a "📚 Sources:" section with properly formatted citations
-4. Only cite sources that were actually provided above"""
+4. Only cite sources that were actually provided above""")
+
+            if conversation_history:
+                prompt_parts.append("\n\nNote: Consider the previous conversation context when formulating your response.")
+
+            user_prompt = "".join(prompt_parts)
 
             # Call GPT-4o
             response = self.client.chat.completions.create(

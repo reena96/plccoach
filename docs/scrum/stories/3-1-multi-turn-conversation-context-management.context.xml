@@ -1,0 +1,150 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.1</storyId>
+    <title>Multi-Turn Conversation Context Management</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-1-multi-turn-conversation-context-management.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>the AI coach to remember our conversation</iWant>
+    <soThat>I can ask follow-up questions without repeating context</soThat>
+    <tasks>
+      - Implement conversation context assembly in generation service (AC: #1)
+        - Create `get_conversation_context()` function in generation service
+        - Load last 10 messages from database ordered by created_at DESC
+        - Format messages into prompt template
+        - Include conversation_id parameter in function signature
+      - Update /coach/query endpoint to pass conversation_id (AC: #1)
+        - Modify `/api/coach/query` endpoint to accept conversation_id
+        - Validate conversation_id exists and belongs to current user
+        - Pass conversation_id to generation service
+      - Implement message retrieval with 10-message limit (AC: #2)
+        - Query messages table with LIMIT 10 and ORDER BY created_at DESC
+        - Ensure proper JOIN with conversations table for user validation
+        - Handle empty conversation case (no prior messages)
+      - Format conversation history for LLM prompt (AC: #1, #3)
+        - Build prompt string with alternating User/Assistant labels
+        - Preserve message order (oldest to newest in context)
+        - Include citations from previous assistant responses
+        - Append current user question to context
+      - Testing and validation (AC: all)
+        - Unit test: context assembly with < 10 messages
+        - Unit test: context assembly with > 10 messages (only last 10 included)
+        - Integration test: multi-turn conversation maintains context
+        - Integration test: follow-up question references previous response
+        - Validation guide created
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Context Retrieval and Formatting:**
+       - Given I have an active conversation with messages
+       - When I ask a follow-up question
+       - Then the AI coach receives the last 10 messages as context
+       - And the conversation history is formatted in the prompt as:
+         User: [First question]
+         Assistant: [First response]
+         User: [Second question]
+         Assistant: [Second response]
+         ...
+         User: [Current question]
+       - And the response considers previous context
+
+    2. **Message Limit (10 messages):**
+       - Given the conversation exceeds 10 message turns
+       - When I ask a new question
+       - Then only the most recent 10 messages are included as context
+       - And older messages are still stored but not sent to the AI
+
+    3. **Context Coherence:**
+       - Given I ask "Can you elaborate on that?"
+       - When the AI generates a response
+       - Then it references the previous response appropriately
+       - And maintains coherence with the conversation flow
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/epics/epic-3-conversations-history.md" title="Epic 3: Conversations & History" section="Story 3.1" snippet="Enable persistent, context-aware multi-turn conversations with the AI coach. Story 3.1 focuses on conversation context management with last 10 messages for follow-up coherence."/>
+      <doc path="docs/stories/1-2-database-schema-creation.md" title="Database Schema" section="Conversations & Messages" snippet="conversations table: id, user_id, title, status, created_at, updated_at. messages table: id, conversation_id, role (user/assistant/system), content, citations (JSONB), created_at. Index: idx_messages_conversation on (conversation_id, created_at)."/>
+    </docs>
+
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" lines="10-34" reason="SQLAlchemy model for conversations table. Contains id, user_id, title, status, timestamps, share_token, and messages relationship."/>
+      <artifact path="api-service/app/models/message.py" kind="model" symbol="Message" lines="10-44" reason="SQLAlchemy model for messages table. Contains conversation_id FK, role (user/assistant/system), content, citations JSONB, timestamps, and CHECK constraint on role."/>
+      <artifact path="api-service/app/routers/coach.py" kind="router" symbol="query_coach" lines="72-77" reason="POST /api/coach/query endpoint. Already accepts conversation_id (line 28) but doesn't use it yet. Needs modification to pass conversation_id to generation service."/>
+      <artifact path="api-service/app/routers/coach.py" kind="schema" symbol="QueryRequest" lines="25-28" reason="Pydantic request model for /api/coach/query. conversation_id already defined as Optional[str] field."/>
+      <artifact path="api-service/app/services/generation_service.py" kind="service" symbol="GenerationService" lines="17-29" reason="AI response generation service using GPT-4o. Needs new get_conversation_context() method to load and format message history."/>
+      <artifact path="api-service/app/services/generation_service.py" kind="method" symbol="_get_system_prompt" lines="31-58" reason="System prompt for AI coach. Already includes citation rules and response structure. Context history should be added to user prompt, not system prompt."/>
+      <artifact path="api-service/app/services/generation_service.py" kind="method" symbol="_format_context" lines="60-92" reason="Formats retrieved chunks into context for LLM. Reference for how to format conversation context."/>
+      <artifact path="api-service/app/services/database.py" kind="service" symbol="Base" reason="SQLAlchemy Base for database session management. Use for queries to messages table."/>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="SQLAlchemy" version="2.0.25" reason="ORM for database queries (conversations and messages)"/>
+        <package name="psycopg2-binary" version="2.9.9" reason="PostgreSQL adapter"/>
+        <package name="openai" version="1.12.0" reason="GPT-4o API for response generation"/>
+        <package name="fastapi" version="0.109.0" reason="REST API framework"/>
+        <package name="pydantic" version="2.5.3" reason="Request/response validation"/>
+        <package name="pytest" version="7.4.4" reason="Testing framework"/>
+        <package name="pytest-asyncio" version="0.23.3" reason="Async test support"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - **Context Window Limit:** MUST limit to last 10 messages to manage token costs (OpenAI GPT-4o pricing ~$0.0025/1K tokens for input)
+    - **Message Ordering:** MUST query with ORDER BY created_at DESC and reverse in Python for chronological prompt format
+    - **User Authorization:** MUST validate conversation belongs to requesting user before loading context (security requirement)
+    - **Database Efficiency:** Use single SQL query with LIMIT 10, not pagination
+    - **Prompt Format:** Use plain text "User:"/"Assistant:" labels, NOT JSON (GPT-4o performs better with natural format)
+    - **Empty Conversation:** Handle gracefully when conversation has 0 messages (new conversation case)
+    - **Existing Code:** Do NOT modify existing _get_system_prompt() or _format_context() methods in generation_service.py - add NEW method for conversation context
+    - **Testing:** Follow existing test patterns in api-service/tests/ using pytest and pytest-asyncio
+  </constraints>
+
+  <interfaces>
+    <interface name="GenerationService.get_conversation_context()" kind="new_method" signature="def get_conversation_context(self, conversation_id: str, user_id: str, db_session) -> str" path="api-service/app/services/generation_service.py" reason="NEW method to add. Loads last 10 messages, formats as User/Assistant dialog, returns string for prompt."/>
+    <interface name="GenerationService.generate_response()" kind="existing_method" signature="def generate_response(self, query: str, context: str, conversation_history: Optional[str] = None) -> Dict" path="api-service/app/services/generation_service.py" reason="MODIFY to accept optional conversation_history parameter. Append to user prompt before query."/>
+    <interface name="POST /api/coach/query" kind="REST_endpoint" signature="QueryRequest(query: str, conversation_id: Optional[str])" path="api-service/app/routers/coach.py" reason="MODIFY endpoint logic to call get_conversation_context() when conversation_id provided, pass result to generate_response()."/>
+    <interface name="Message.query()" kind="SQLAlchemy_query" signature="session.query(Message).filter(Message.conversation_id == conv_id).order_by(Message.created_at.desc()).limit(10)" path="api-service/app/services/generation_service.py" reason="NEW query to add in get_conversation_context() method."/>
+    <interface name="Conversation.query()" kind="SQLAlchemy_query" signature="session.query(Conversation).filter(Conversation.id == conv_id, Conversation.user_id == user_id).first()" path="api-service/app/services/generation_service.py" reason="NEW query to add for user authorization check."/>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest for all tests. Follow existing patterns in api-service/tests/.
+      - Unit tests: Mock database with conftest.py fixtures
+      - Integration tests: Use real test database (TestContainers or test DB instance)
+      - Async tests: Use @pytest.mark.asyncio decorator
+      - Coverage: Aim for >80% coverage on new code
+      - Test file naming: test_*.py in appropriate subdirectory
+      - Assertions: Use clear assert statements with descriptive messages
+    </standards>
+
+    <locations>
+      - api-service/tests/unit/ (create if doesn't exist)
+      - api-service/tests/integration/ (create if doesn't exist)
+      - api-service/tests/conftest.py (shared fixtures)
+    </locations>
+
+    <ideas>
+      - AC #1: Unit test get_conversation_context() with mocked database returning 5 messages, verify formatted output
+      - AC #1: Unit test QueryRequest validation with conversation_id field
+      - AC #2: Unit test get_conversation_context() with mocked database returning 15 messages, verify only last 10 included
+      - AC #2: Unit test get_conversation_context() with empty conversation (0 messages), verify empty string returned
+      - AC #3: Integration test: create conversation with 3 messages, call /api/coach/query with conversation_id, verify response references previous context
+      - AC #3: Integration test: send follow-up "Can you elaborate?" after initial question, verify coherence
+      - Security: Unit test get_conversation_context() with mismatched user_id, verify authorization failure
+      - Edge case: Unit test with conversation having exactly 10 messages
+      - Edge case: Unit test with deleted/archived conversation status
+      - Performance: Integration test measuring query time for conversation with 100+ messages in DB (should only load 10)
+    </ideas>
+  </tests>
+</story-context>
