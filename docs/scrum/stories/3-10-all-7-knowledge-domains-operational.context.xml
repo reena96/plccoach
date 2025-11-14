@@ -1,0 +1,214 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>10</storyId>
+    <title>All 7 Knowledge Domains Operational</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-10-all-7-knowledge-domains-operational.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>product owner</asA>
+    <iWant>all 7 knowledge domains to be fully operational</iWant>
+    <soThat>educators can get guidance on any PLC topic</soThat>
+    <tasks>
+- Create domain test suite (AC: #1, #2)
+  - Document: /tests/domain-coverage-tests.md
+  - 3-5 test queries per domain (21-35 total)
+  - Expected citations for each query
+
+- Verify intent routing (AC: #2, #3)
+  - Test intent classifier identifies correct domains
+  - Test multi-domain query routing
+  - Validate confidence scores
+
+- Test retrieval accuracy (AC: #2)
+  - Verify correct domain books retrieved
+  - Check citation extraction works
+  - Validate chunk relevance
+
+- Document content gaps (AC: #1)
+  - Identify domains with weak coverage
+  - List missing topics or books
+  - Recommend content additions
+
+- Testing and validation (AC: all)
+  - Run all 21-35 domain test queries
+  - Verify 90%+ queries return relevant responses
+  - Document results in test report
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **Domain Coverage Testing:**
+   - Given the content ingestion from Epic 2 is complete
+   - When domain testing is performed
+   - Then queries for each of the 7 domains return relevant responses with appropriate citations
+
+2. **Seven Domain Tests:**
+   - Assessment & Evaluation: "What makes a good common formative assessment?" → cites "Collaborative Common Assessments"
+   - Collaborative Teams: "How do we establish effective team norms?" → cites "Learning by Doing" or "Handbook for Collaborative Teams"
+   - Leadership & Administration: "What is the role of the principal in a PLC?" → cites "Leaders of Learning"
+   - Curriculum & Instruction: "What is a guaranteed and viable curriculum?" → cites relevant curriculum books
+   - Data Analysis & Response: "How do we implement RTI effectively?" → cites "Simplifying Response to Intervention"
+   - School Culture & Systems: "How do we shift to a PLC culture?" → cites implementation books
+   - Student Learning & Engagement: "How do we increase student engagement?" → cites student practices books
+
+3. **Cross-Domain Queries:**
+   - Given a query spans multiple domains
+   - When "How do assessments connect to RTI?" is asked
+   - Then response pulls from both "assessment" and "data_analysis" domains
+
+4. **Clarification for Vague Queries:**
+   - Given a vague query "Tell me about PLCs"
+   - When processed
+   - Then clarification question about specific area of interest is triggered
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>PRD_Solution_Tree_PLC_Coach_Detailed.md</path>
+        <title>Product Requirements Document - Solution Tree PLC Coach</title>
+        <section>Section 9.2 - Domain Taxonomy</section>
+        <snippet>Defines the 7 knowledge domains for PLC guidance: Assessment & Evaluation, Collaborative Teams, Leadership & Administration, Curriculum & Instruction, Data Analysis & Response, School Culture & Systems, and Student Learning & Engagement.</snippet>
+      </doc>
+      <doc>
+        <path>TECHNICAL_ARCHITECTURE.md</path>
+        <title>Technical Architecture Document</title>
+        <section>Section 4 - AI/RAG Infrastructure</section>
+        <snippet>Describes the intent classification, domain routing, and semantic retrieval architecture using GPT-4o function calling and pgvector similarity search.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics/epic-3-conversations-history.md</path>
+        <title>Epic 3: Conversations & History</title>
+        <section>Story 3.10</section>
+        <snippet>Defines comprehensive testing requirements for all 7 knowledge domains with specific test queries and expected citation books per domain.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/app/services/intent_router.py</path>
+        <kind>service</kind>
+        <symbol>DOMAINS</symbol>
+        <lines>18-27</lines>
+        <reason>Defines the 7 PLC knowledge domains with their descriptions. This is the authoritative source for domain definitions used by the intent classification system.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/intent_router.py</path>
+        <kind>service</kind>
+        <symbol>IntentRouter</symbol>
+        <lines>68-204</lines>
+        <reason>Classifies user queries into knowledge domains using GPT-4o function calling. Provides classify() method, confidence scores, and clarification detection.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/retrieval_service.py</path>
+        <kind>service</kind>
+        <symbol>RetrievalService</symbol>
+        <lines>21-231</lines>
+        <reason>Performs semantic retrieval using pgvector similarity search with domain filtering. Integrates with IntentRouter for domain-based chunk retrieval.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/generation_service.py</path>
+        <kind>service</kind>
+        <symbol>GenerationService</symbol>
+        <lines>all</lines>
+        <reason>Generates responses with citations from retrieved chunks. This service consumes the output of retrieval and should be tested for citation quality.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/content-ingestion/test_embeddings.py</path>
+        <kind>test</kind>
+        <symbol>test_embeddings</symbol>
+        <lines>all</lines>
+        <reason>Existing test for embeddings generation from Epic 2. Provides patterns for testing content ingestion infrastructure.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="openai" version="latest">OpenAI API client for GPT-4o function calling and embeddings</package>
+        <package name="sqlalchemy" version="latest">Database ORM for querying embeddings table</package>
+        <package name="pgvector" version="latest">PostgreSQL vector extension for similarity search</package>
+        <package name="pytest" version="latest">Testing framework for domain validation tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Testing story: No new code implementation required, only validation of existing Epic 2 infrastructure
+- Must test ALL 7 domains (assessment, collaboration, leadership, curriculum, data_analysis, school_culture, student_learning)
+- Minimum 3 test queries per domain (21 minimum, 35 maximum)
+- Must validate intent routing correctly identifies primary and secondary domains
+- Must verify retrieval returns chunks from correct domain books with appropriate citations
+- Document any gaps in content coverage for future content ingestion work
+- Test clarification prompts trigger for vague queries
+- Cross-domain queries must pull from multiple domain sources
+- 90%+ success rate required for domain test queries
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>IntentRouter.classify(query: str) -> Dict</name>
+      <kind>Python method</kind>
+      <signature>def classify(self, query: str) -> Dict[str, Any]</signature>
+      <path>api-service/app/services/intent_router.py:118-180</path>
+      <returns>
+{
+  "primary_domain": str,  # One of: assessment, collaboration, leadership, curriculum, data_analysis, school_culture, student_learning
+  "secondary_domains": List[str],  # Up to 2 additional domains
+  "needs_clarification": bool,  # True if query is too vague
+  "clarification_question": str,  # Question to ask user (if needs_clarification)
+  "confidence": float  # 0-1 confidence score
+}
+      </returns>
+    </interface>
+    <interface>
+      <name>RetrievalService.retrieve(query: str, final_k: int = 7) -> Dict</name>
+      <kind>Python method</kind>
+      <signature>def retrieve(self, query: str, final_k: int = 7) -> Dict[str, Any]</signature>
+      <path>api-service/app/services/retrieval_service.py:166-230</path>
+      <returns>
+{
+  "query": str,
+  "classification": Dict,  # From IntentRouter.classify
+  "chunks": List[Dict],  # Retrieved content chunks with metadata and similarity scores
+  "total_retrieved": int,
+  "total_after_dedup": int
+}
+      </returns>
+    </interface>
+    <interface>
+      <name>RetrievalService.test_retrieval(test_queries: List[str]) -> List[Dict]</name>
+      <kind>Python method</kind>
+      <signature>def test_retrieval(self, test_queries: List[str]) -> List[Dict[str, Any]]</signature>
+      <path>api-service/app/services/retrieval_service.py:232-250</path>
+      <returns>List of retrieval results with query, primary_domain, num_chunks, and avg_similarity</returns>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing follows pytest conventions with test files in api-service/tests/. Integration tests for AI services are located in api-service/tests/content-ingestion/. Domain validation tests should create a comprehensive test suite that exercises all 7 domains with representative queries, validates intent classification accuracy, checks retrieval returns appropriate books/chunks, and verifies citation extraction works correctly.
+    </standards>
+    <locations>
+api-service/tests/
+api-service/tests/content-ingestion/
+api-service/tests/unit/
+New location: api-service/tests/domain-validation/ (to be created)
+Documentation: docs/testing/domain-coverage-tests.md (to be created)
+    </locations>
+    <ideas>
+- AC #1, #2: Create domain_test_suite.py with 3-5 queries per domain (21-35 total)
+- AC #2: Test each of the 7 specific queries mentioned in acceptance criteria with expected book citations
+- AC #3: Test cross-domain query "How do assessments connect to RTI?" validates both assessment and data_analysis domains used
+- AC #4: Test vague query "Tell me about PLCs" triggers needs_clarification=True with appropriate clarification question
+- Validate IntentRouter.classify() returns correct primary_domain for each test query
+- Validate confidence scores are > 0.7 for clear queries
+- Validate RetrievalService.retrieve() returns chunks with similarity > 0.5
+- Check metadata in retrieved chunks contains correct book_id, title, pages for expected citation books
+- Document any domains with low coverage (< 5 books or < 50 chunks)
+- Create summary report showing pass/fail for each domain with specific book citations found
+    </ideas>
+  </tests>
+</story-context>

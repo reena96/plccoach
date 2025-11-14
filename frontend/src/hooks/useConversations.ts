@@ -23,27 +23,34 @@ export interface ConversationsResponse {
 }
 
 /**
- * Fetch conversations for infinite scroll pagination.
+ * Fetch conversations for infinite scroll pagination with optional search filtering.
  *
- * AC #4: Implement pagination with infinite scroll using React Query
+ * Story 3.3 AC #4: Implement pagination with infinite scroll using React Query
+ * Story 3.5 AC #1: Add search parameter for filtering conversations
  *
  * @param userId - User ID to fetch conversations for
  * @param limit - Number of conversations per page (default: 20)
+ * @param search - Optional search query for filtering (Story 3.5)
  * @returns useInfiniteQuery result with conversations data
  */
-export function useConversations(userId: string, limit: number = 20) {
+export function useConversations(userId: string, limit: number = 20, search?: string) {
   return useInfiniteQuery<ConversationsResponse>({
-    queryKey: ['conversations', userId, limit],
+    queryKey: ['conversations', userId, limit, search],
     queryFn: async ({ pageParam = 0 }) => {
+      const params: Record<string, any> = {
+        user_id: userId,
+        limit,
+        offset: pageParam as number,
+      };
+
+      // Add search param if provided (Story 3.5)
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
+
       const response = await axios.get<ConversationsResponse>(
         '/api/conversations',
-        {
-          params: {
-            user_id: userId,
-            limit,
-            offset: pageParam as number,
-          },
-        }
+        { params }
       );
       return response.data;
     },

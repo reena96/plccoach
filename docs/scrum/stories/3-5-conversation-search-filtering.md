@@ -77,12 +77,35 @@ so that I can find specific guidance I received weeks ago.
 
 ### Context Reference
 
-<!-- Will be filled by story-context workflow -->
-
-### Agent Model Used
-
-<!-- Will be filled during implementation -->
+- Inline context (simple search feature, no formal context needed)
 
 ### File List
 
-<!-- Will be filled during implementation -->
+**Modified:**
+- api-service/app/routers/conversations.py (added search parameter to GET /api/conversations)
+- frontend/src/hooks/useConversations.ts (added search parameter to hook)
+- frontend/src/components/conversation/ConversationList.tsx (added search UI with debouncing)
+
+**Created:**
+- docs/validation/epic3_3-5_validation.md (validation guide)
+
+### Implementation Summary
+
+Added search capability to conversation list with backend filtering and debounced frontend input:
+
+**Backend:**
+- Added optional `search` query parameter to `GET /api/conversations`
+- PostgreSQL ILIKE search on conversation title AND message content
+- Case-insensitive substring matching
+- Maintains pagination and sorting
+
+**Frontend:**
+- Search input UI at top of sidebar with search icon and clear button
+- Debounced search (300ms delay) to prevent excessive API calls
+- React Query integration with search parameter
+- Empty state handling for no results vs no conversations
+
+**Acceptance Criteria Status:**
+- ✅ AC#1: Search box filters by title and message content (case-insensitive)
+- ✅ AC#2: Search results clickable, loads conversation
+- ✅ AC#3: Clear search returns all conversations in normal order

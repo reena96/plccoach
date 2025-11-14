@@ -50,29 +50,46 @@ async def list_conversations(
     user_id: str = Query(..., description="User ID to fetch conversations for"),
     limit: int = Query(20, ge=1, le=100, description="Number of conversations to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
+    search: Optional[str] = Query(None, description="Search query for filtering conversations"),
     db: Session = Depends(get_db)
 ):
     """
-    Get paginated list of conversations for a user.
+    Get paginated list of conversations for a user with optional search filtering.
 
     Returns conversations ordered by most recently updated first.
     Includes first message preview (first 60 characters) and message count.
 
-    AC #1: Sidebar Display - Return conversations ordered by updated_at DESC
-    AC #4: Pagination - Support limit/offset pagination with metadata
+    Story 3.3 AC #1: Sidebar Display - Return conversations ordered by updated_at DESC
+    Story 3.3 AC #4: Pagination - Support limit/offset pagination with metadata
+    Story 3.5 AC #1: Search filtering - Filter by title or message content (case-insensitive)
     """
     try:
-        # Get total count for pagination metadata
-        total = db.query(Conversation).filter(
+        # Build base query
+        base_filter = [
             Conversation.user_id == user_id,
             Conversation.status == 'active'  # Only show active conversations
-        ).count()
+        ]
+
+        # Add search filter if provided (Story 3.5)
+        if search:
+            search_pattern = f"%{search}%"
+            # Search in title OR in message content
+            # Use subquery to find conversations with matching messages
+            search_filter = func.or_(
+                Conversation.title.ilike(search_pattern),
+                Conversation.id.in_(
+                    db.query(Message.conversation_id).filter(
+                        Message.content.ilike(search_pattern)
+                    ).distinct()
+                )
+            )
+            base_filter.append(search_filter)
+
+        # Get total count for pagination metadata
+        total = db.query(Conversation).filter(*base_filter).count()
 
         # Get paginated conversations
-        conversations_query = db.query(Conversation).filter(
-            Conversation.user_id == user_id,
-            Conversation.status == 'active'
-        ).order_by(desc(Conversation.updated_at)).limit(limit).offset(offset)
+        conversations_query = db.query(Conversation).filter(*base_filter).order_by(desc(Conversation.updated_at)).limit(limit).offset(offset)
 
         conversations = conversations_query.all()
 

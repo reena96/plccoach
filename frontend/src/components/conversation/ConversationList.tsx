@@ -31,9 +31,20 @@ export function ConversationList({
 }: ConversationListProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // Story 3.5: Search input
+  const [debouncedSearch, setDebouncedSearch] = useState(''); // Story 3.5: Debounced search
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Fetch conversations with infinite scroll
+  // Story 3.5: Debounce search input (300ms delay)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Fetch conversations with infinite scroll and search filtering
   const {
     data,
     fetchNextPage,
@@ -41,7 +52,7 @@ export function ConversationList({
     isFetchingNextPage,
     isLoading,
     isError,
-  } = useConversations(userId);
+  } = useConversations(userId, 20, debouncedSearch);
 
   // Detect mobile breakpoint (768px)
   useEffect(() => {
@@ -161,6 +172,54 @@ export function ConversationList({
               </svg>
               New Conversation
             </button>
+
+            {/* Story 3.5: Search Box */}
+            <div className="mt-3 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search conversations..."
+                className="w-full px-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Search conversations"
+              />
+              {/* Search icon */}
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              {/* Clear button (Story 3.5 AC #3) */}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Conversation list */}
@@ -179,7 +238,20 @@ export function ConversationList({
 
             {!isLoading && conversations.length === 0 && (
               <div className="p-4 text-center text-gray-500">
-                No conversations yet
+                {debouncedSearch ? (
+                  // Story 3.5: Search returned no results
+                  <>
+                    <p>No conversations found for "{debouncedSearch}"</p>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="mt-2 text-sm text-blue-600 hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  'No conversations yet'
+                )}
               </div>
             )}
 
