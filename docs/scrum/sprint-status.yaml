@@ -72,7 +72,7 @@ development_status:
   epic-3: in-progress
   3-1-multi-turn-conversation-context-management: review
   3-2-conversation-persistence-auto-save: review
-  3-3-conversation-list-sidebar: ready-for-dev
+  3-3-conversation-list-sidebar: review
   3-4-new-conversation-clear-context: drafted
   3-5-conversation-search-filtering: drafted
   3-6-conversation-sharing-via-link: drafted

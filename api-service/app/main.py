@@ -13,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.config import settings
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.logging import LoggingMiddleware
-from app.routers import health, auth, admin, coach
+from app.routers import health, auth, admin, coach, conversations
 from app.services.database import SessionLocal
 from app.services.cleanup_service import delete_expired_sessions
 
@@ -99,6 +99,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(coach.router, tags=["coach"])  # Epic 2: AI Coach endpoint
+app.include_router(conversations.router, tags=["conversations"])  # Epic 3: Conversation management
 
 
 @app.get("/")
