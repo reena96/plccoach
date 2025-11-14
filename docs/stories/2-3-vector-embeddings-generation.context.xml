@@ -1,0 +1,130 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.3</storyId>
+    <title>Vector Embeddings Generation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-3-vector-embeddings-generation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>content engineer</asA>
+    <iWant>to generate vector embeddings for all content chunks</iWant>
+    <soThat>semantic similarity search can be performed</soThat>
+    <tasks>
+      - Install OpenAI SDK and numpy
+      - Create embedding generation script
+      - Implement OpenAI API integration
+      - Add batch processing (100 chunks)
+      - Implement rate limit handling with exponential backoff
+      - Add progress tracking
+      - Implement cost calculation and logging
+      - Add retry logic for transient failures
+      - Create temporary embedding storage
+      - Add comprehensive tests
+      - Process sample chunks
+      - Validate embeddings
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Embedding Generation:
+       - Text content sent to OpenAI text-embedding-3-large API
+       - 3072-dimensional vector embeddings generated
+       - Embeddings associated with chunk metadata
+
+    2. Batch Processing:
+       - Embeddings generated in batches of 100
+       - Efficient API usage
+
+    3. Error Handling:
+       - Rate limiting handled gracefully
+       - Exponential backoff for retries
+       - Transient failure recovery
+
+    4. Progress & Cost Tracking:
+       - Progress logged (chunks processed / total)
+       - Token count tracked
+       - API cost calculated and logged
+       - Target: ~$6.50 for 50M tokens
+
+    5. Performance:
+       - 50,000-100,000 chunks processed in <24 hours
+       - Embeddings stored temporarily for Story 2.4
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-2-core-ai-coach.md</path>
+        <title>Epic 2: Core AI Coach</title>
+        <section>Story 2.3: Vector Embeddings Generation</section>
+        <snippet>Generate vector embeddings for content chunks using OpenAI API</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>scripts/content-ingestion/03_generate_embeddings.py</path>
+        <purpose>Main embedding generation script</purpose>
+      </file>
+      <file>
+        <path>scripts/content-ingestion/02_chunk_content.py</path>
+        <purpose>Story 2.2 - provides chunked content</purpose>
+        <dependency>true</dependency>
+      </file>
+    </code>
+    <dependencies>
+      <package>openai==1.12.0</package>
+      <package>numpy</package>
+      <package>boto3</package>
+      <package>tenacity</package>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - OpenAI text-embedding-3-large: 3072 dimensions, $0.13/1M tokens
+    - Use OpenAI Python SDK with batch processing
+    - Implement exponential backoff for rate limit errors
+    - Store embeddings in numpy array format temporarily
+    - Monitor OpenAI API costs in real-time
+    - Script location: /scripts/content-ingestion/03_generate_embeddings.py
+    - Must use output from Story 2.2 as input
+  </constraints>
+
+  <interfaces>
+    <input>
+      <source>S3 bucket: plccoach-content/chunked/ (from Story 2.2)</source>
+      <format>JSON files with chunked content</format>
+    </input>
+    <output>
+      <destination>S3 bucket: plccoach-content/embeddings/</destination>
+      <format>JSON files with chunks + embeddings (numpy arrays)</format>
+    </output>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests for OpenAI API integration (mocked)
+      Unit tests for batch processing
+      Unit tests for retry logic
+      Integration tests with OpenAI API (small batches)
+      Cost calculation validation
+    </standards>
+    <locations>
+      - tests/content-ingestion/test_embeddings.py
+      - scripts/content-ingestion/
+    </locations>
+    <ideas>
+      - AC#1: Test embedding generation creates 3072-dim vectors
+      - AC#1: Verify embeddings associated with metadata
+      - AC#2: Test batch processing groups chunks correctly
+      - AC#3: Test rate limit handling with mock API
+      - AC#3: Verify exponential backoff timing
+      - AC#4: Test progress logging
+      - AC#4: Verify cost calculation accuracy
+      - AC#5: Test large batch performance (mocked)
+    </ideas>
+  </tests>
+</story-context>

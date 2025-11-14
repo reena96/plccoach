@@ -42,8 +42,24 @@ python 02_chunk_content.py --bucket plccoach-content --input-prefix processed/ -
 - Domain classification (rule-based)
 - Quality validation
 
-### Stage 3: Embedding Generation (Story 2.3)
-_Coming next_
+### Stage 3: Embedding Generation (`03_generate_embeddings.py`)
+Generates vector embeddings for content chunks using OpenAI API.
+
+**Input:** JSON files with chunked content (`chunked/` prefix)
+**Output:** JSON files with chunks + embeddings (`embeddings/` prefix)
+
+**Usage:**
+```bash
+export OPENAI_API_KEY="your-api-key"
+python 03_generate_embeddings.py --bucket plccoach-content --input-prefix chunked/ --output-prefix embeddings/
+```
+
+**Features:**
+- 3072-dimensional embeddings (text-embedding-3-large)
+- Batch processing (100 chunks per API call)
+- Exponential backoff retry logic
+- Real-time cost tracking
+- Progress logging
 
 ### Stage 4: Database Upload (Story 2.4)
 _Coming next_

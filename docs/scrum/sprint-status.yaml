@@ -56,7 +56,7 @@ development_status:
   epic-2: in-progress
   2-1-content-ingestion-pipeline-pdf-processing: done
   2-2-content-chunking-with-metadata-tagging: done
-  2-3-vector-embeddings-generation: backlog
+  2-3-vector-embeddings-generation: done
   2-4-postgresql-pgvector-setup-data-upload: backlog
   2-5-intent-classification-domain-routing: backlog
   2-6-semantic-retrieval-service: backlog
