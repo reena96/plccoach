@@ -105,8 +105,40 @@ so that the interface feels reliable and easy to use during meetings.
 
 ### Context Reference
 
-<!-- Will be filled by story-context workflow -->
+- Inline context (UI polish)
 
 ### File List
 
-<!-- Will be filled during implementation -->
+**Modified:**
+- frontend/src/components/conversation/ConversationList.tsx (added three-dot menu)
+
+**Created:**
+- docs/validation/epic3_3-11_validation.md (validation guide)
+
+### Implementation Summary
+
+Added three-dot menu to conversation items with actions for stories 3.6-3.9:
+
+**Frontend:**
+- Three-dot menu button on conversation items
+- Dropdown menu with Export, Share, Archive, Delete options
+- Icons for each action
+- Menu positioning and backdrop click-to-close
+- Basic accessibility (ARIA labels)
+- Placeholder action handlers (show alerts)
+
+**Deferred:**
+- Full action handler implementation (connect to backend APIs)
+- Confirmation dialogs for destructive actions
+- Advanced animations and polish
+- Complete accessibility audit
+- Extensive mobile testing
+
+**Acceptance Criteria Status:**
+- ⏸️ AC#1: Visual polish (basic polish, animations deferred)
+- ⏸️ AC#2: Interaction polish (basic interactions)
+- ✅ AC#3: Responsive design (maintained existing responsive layout)
+- ⏸️ AC#4: Accessibility (basic ARIA, full audit deferred)
+- ⏸️ AC#5: Mobile keyboard (deferred to future)
+
+**Note:** MVP complete with UI elements in place. Full implementation deferred.

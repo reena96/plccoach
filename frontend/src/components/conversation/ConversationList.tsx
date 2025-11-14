@@ -296,24 +296,109 @@ function ConversationItem({
   isActive,
   onClick,
 }: ConversationItemProps) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
+
+  const handleAction = (e: React.MouseEvent, action: string) => {
+    e.stopPropagation();
+    setShowMenu(false);
+
+    // TODO: Implement actions (Story 3.11)
+    console.log(`Action: ${action} for conversation ${conversation.id}`);
+    alert(`${action} feature coming soon in Story 3.11!`);
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className={`
-        w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors
-        ${isActive ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}
-      `}
-    >
-      <h3 className="font-medium text-gray-900 truncate mb-1">
-        {conversation.title}
-      </h3>
-      <p className="text-sm text-gray-600 truncate mb-2">
-        {conversation.first_message_preview || 'No preview available'}
-      </p>
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span>{formatTimestamp(conversation.updated_at)}</span>
-        <span>{conversation.message_count} messages</span>
-      </div>
-    </button>
+    <div className="relative">
+      <button
+        onClick={onClick}
+        className={`
+          w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors
+          ${isActive ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}
+        `}
+      >
+        <h3 className="font-medium text-gray-900 truncate mb-1">
+          {conversation.title}
+        </h3>
+        <p className="text-sm text-gray-600 truncate mb-2">
+          {conversation.first_message_preview || 'No preview available'}
+        </p>
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{formatTimestamp(conversation.updated_at)}</span>
+          <span>{conversation.message_count} messages</span>
+        </div>
+      </button>
+
+      {/* Story 3.11: Three-dot menu for actions */}
+      <button
+        onClick={handleMenuClick}
+        className="absolute top-2 right-2 p-2 hover:bg-gray-200 rounded-full transition-colors"
+        aria-label="Conversation actions"
+      >
+        <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+        </svg>
+      </button>
+
+      {/* Dropdown menu */}
+      {showMenu && (
+        <>
+          {/* Backdrop to close menu */}
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setShowMenu(false)}
+          />
+
+          {/* Menu items */}
+          <div className="absolute right-2 top-12 z-20 bg-white border border-gray-200 rounded-md shadow-lg py-1 w-48">
+            <button
+              onClick={(e) => handleAction(e, 'Export')}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export (Story 3.9)
+            </button>
+
+            <button
+              onClick={(e) => handleAction(e, 'Share')}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Link (Story 3.6)
+            </button>
+
+            <button
+              onClick={(e) => handleAction(e, 'Archive')}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              Archive (Story 3.7)
+            </button>
+
+            <hr className="my-1" />
+
+            <button
+              onClick={(e) => handleAction(e, 'Delete')}
+              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete (Story 3.8)
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
