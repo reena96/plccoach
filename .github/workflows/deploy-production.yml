@@ -1,0 +1,330 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: 971422717446.dkr.ecr.us-east-1.amazonaws.com/plccoach/api
+  ECS_CLUSTER: plccoach-cluster
+  ECS_SERVICE: plccoach-api-service
+  TASK_FAMILY: plccoach-api-task
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start test database
+        run: |
+          cd api-service
+          docker-compose up -d db
+          sleep 10  # Wait for database to be ready
+
+      - name: Run tests
+        run: |
+          cd api-service
+          docker-compose run --rm api pytest -v --cov=app --cov-report=term-missing
+
+      - name: Check test results
+        run: |
+          cd api-service
+          docker-compose run --rm api pytest --tb=short
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd api-service
+          docker-compose down -v
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+    outputs:
+      image-tag: ${{ steps.build-image.outputs.image-tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd api-service
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REPOSITORY:latest
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REPOSITORY:latest
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Pushed image: $ECR_REPOSITORY:$IMAGE_TAG"
+
+  migrate-database:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get database URL from Secrets Manager
+        id: get-db-url
+        run: |
+          DB_SECRET=$(aws secretsmanager get-secret-value --secret-id plccoach-db-password --region $AWS_REGION --query SecretString --output text)
+          DB_URL=$(echo $DB_SECRET | jq -r '.database_url')
+          echo "::add-mask::$DB_URL"
+          echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
+
+      - name: Run Alembic migrations
+        run: |
+          cd api-service
+          pip install alembic psycopg2-binary
+          alembic upgrade head
+
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build-and-push, migrate-database]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update ECS service with new image
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+        run: |
+          # Force new deployment with latest image
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
+
+          echo "Deployment triggered for image tag: $IMAGE_TAG"
+
+      - name: Wait for service stability
+        run: |
+          echo "Waiting for ECS service to stabilize (this may take 2-3 minutes)..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --region $AWS_REGION
+
+      - name: Get deployment status
+        run: |
+          aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --region $AWS_REGION \
+            --query 'services[0].{Name:serviceName,Status:status,Running:runningCount,Desired:desiredCount}' \
+            --output table
+
+  smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    needs: deploy
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get ALB DNS
+        id: get-alb
+        run: |
+          cd infrastructure
+          # Install Terraform
+          wget -O terraform.zip https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+          unzip -q terraform.zip
+          chmod +x terraform
+
+          # Get outputs
+          ./terraform init
+          ALB_DNS=$(./terraform output -json | jq -r '.alb_dns_name.value')
+          echo "alb-dns=$ALB_DNS" >> $GITHUB_OUTPUT
+          echo "ALB DNS: $ALB_DNS"
+
+      - name: Test health endpoint
+        run: |
+          ALB_DNS="${{ steps.get-alb.outputs.alb-dns }}"
+          echo "Testing: http://$ALB_DNS/api/health"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/health")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Health check passed (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Health check failed (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+
+      - name: Test database connectivity
+        run: |
+          ALB_DNS="${{ steps.get-alb.outputs.alb-dns }}"
+          echo "Testing: http://$ALB_DNS/api/ready"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/ready")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Database connectivity check passed (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Database connectivity check failed (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+
+      - name: Test OAuth redirects
+        run: |
+          ALB_DNS="${{ steps.get-alb.outputs.alb-dns }}"
+
+          # Test Google OAuth
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "http://$ALB_DNS/auth/google/login")
+          if [ "$HTTP_STATUS" = "302" ] || [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Google OAuth redirect working (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️  Google OAuth returned HTTP $HTTP_STATUS (expected 302)"
+          fi
+
+          # Test Clever SSO
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "http://$ALB_DNS/auth/clever/login")
+          if [ "$HTTP_STATUS" = "302" ] || [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Clever SSO redirect working (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️  Clever SSO returned HTTP $HTTP_STATUS (expected 302)"
+          fi
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get infrastructure outputs
+        id: get-outputs
+        run: |
+          cd infrastructure
+          # Install Terraform
+          wget -O terraform.zip https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+          unzip -q terraform.zip
+          chmod +x terraform
+
+          # Get outputs
+          ./terraform init
+          S3_BUCKET=$(./terraform output -json | jq -r '.s3_frontend_bucket.value')
+          CLOUDFRONT_ID=$(./terraform output -json | jq -r '.cloudfront_distribution_id.value')
+          ALB_DNS=$(./terraform output -json | jq -r '.alb_dns_name.value')
+
+          echo "s3-bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          echo "cloudfront-id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
+          echo "alb-dns=$ALB_DNS" >> $GITHUB_OUTPUT
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: http://${{ steps.get-outputs.outputs.alb-dns }}
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Deploy to S3
+        run: |
+          cd frontend
+          S3_BUCKET="${{ steps.get-outputs.outputs.s3-bucket }}"
+
+          # Sync all files except index.html with long cache
+          aws s3 sync dist/ s3://$S3_BUCKET/ \
+            --region $AWS_REGION \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+
+          # Upload index.html with no-cache
+          aws s3 cp dist/index.html s3://$S3_BUCKET/index.html \
+            --region $AWS_REGION \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html"
+
+      - name: Invalidate CloudFront
+        run: |
+          CLOUDFRONT_ID="${{ steps.get-outputs.outputs.cloudfront-id }}"
+          aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_ID \
+            --paths "/*"
+
+      - name: Deployment summary
+        run: |
+          echo "🎉 Deployment Complete!"
+          echo "======================="
+          echo ""
+          echo "Backend API: http://${{ steps.get-outputs.outputs.alb-dns }}"
+          echo "Frontend: Check CloudFront distribution"
+          echo ""
+          echo "All services deployed and smoke tests passed!"
