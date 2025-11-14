@@ -1,12 +1,14 @@
 """
 Story 3.3: Conversation List Sidebar
+Story 3.6: Conversation Sharing via Link
 
 Conversation management endpoints for listing, viewing, and managing conversations.
 """
 
 import logging
+import uuid
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from pydantic import BaseModel, Field
@@ -120,4 +122,206 @@ async def list_conversations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch conversations: {str(e)}"
+        )
+
+
+# Story 3.6: Conversation Sharing
+class ShareResponse(BaseModel):
+    """Response model for share link generation."""
+    share_url: str
+    share_token: str
+    expires_at: Optional[datetime]
+
+
+class SharedConversationResponse(BaseModel):
+    """Response model for viewing shared conversation."""
+    id: str
+    title: str
+    owner_name: str
+    created_at: datetime
+    messages: list[dict]
+
+    model_config = {"from_attributes": True}
+
+
+@router.post("/{conversation_id}/share", response_model=ShareResponse)
+async def generate_share_link(
+    conversation_id: str,
+    expires_in_days: int = Query(30, ge=1, le=365, description="Link expiration in days (1-365)"),
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a shareable link for a conversation.
+
+    AC #2: Generate unique share token, set share_enabled=true, return share URL
+    """
+    try:
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Generate share token
+        share_token = str(uuid.uuid4())
+
+        # Calculate expiration
+        expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+
+        # Update conversation
+        conversation.share_token = share_token
+        conversation.share_enabled = True
+        conversation.share_expires_at = expires_at
+
+        db.commit()
+
+        # Build share URL (use environment-based base URL in production)
+        share_url = f"https://app.plccoach.com/shared/{share_token}"
+
+        logger.info(f"Share link generated for conversation {conversation_id} by user {user_id}")
+
+        return ShareResponse(
+            share_url=share_url,
+            share_token=share_token,
+            expires_at=expires_at
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating share link: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate share link: {str(e)}"
+        )
+
+
+@router.get("/shared/{share_token}", response_model=SharedConversationResponse)
+async def get_shared_conversation(
+    share_token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    View a shared conversation (read-only).
+
+    AC #3: Return conversation if share_enabled=true and not expired
+    """
+    try:
+        # Find conversation by share token
+        conversation = db.query(Conversation).filter(
+            Conversation.share_token == share_token
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Shared conversation not found"
+            )
+
+        # Verify sharing is enabled
+        if not conversation.share_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This conversation is no longer shared"
+            )
+
+        # Check expiration
+        if conversation.share_expires_at and conversation.share_expires_at < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This shared link has expired"
+            )
+
+        # Get messages
+        messages = db.query(Message).filter(
+            Message.conversation_id == conversation.id
+        ).order_by(Message.created_at).all()
+
+        # Format messages
+        messages_data = [
+            {
+                "id": str(msg.id),
+                "role": msg.role,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat(),
+                "citations": msg.citations
+            }
+            for msg in messages
+        ]
+
+        # Get owner name
+        from app.models.user import User
+        owner = db.query(User).filter(User.id == conversation.user_id).first()
+        owner_name = owner.name if owner else "Unknown User"
+
+        return SharedConversationResponse(
+            id=str(conversation.id),
+            title=conversation.title or "Untitled Conversation",
+            owner_name=owner_name,
+            created_at=conversation.created_at,
+            messages=messages_data
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching shared conversation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch shared conversation: {str(e)}"
+        )
+
+
+@router.delete("/{conversation_id}/share")
+async def disable_sharing(
+    conversation_id: str,
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Disable sharing for a conversation.
+
+    AC #4: Set share_enabled=false, invalidate link
+    """
+    try:
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Disable sharing
+        conversation.share_enabled = False
+        # Optionally clear token for security
+        conversation.share_token = None
+        conversation.share_expires_at = None
+
+        db.commit()
+
+        logger.info(f"Sharing disabled for conversation {conversation_id} by user {user_id}")
+
+        return {"message": "Sharing disabled successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error disabling sharing: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to disable sharing: {str(e)}"
         )

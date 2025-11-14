@@ -1,6 +1,6 @@
 # Story 3.6: Conversation Sharing via Link
 
-Status: drafted
+Status: review
 
 ## Story
 

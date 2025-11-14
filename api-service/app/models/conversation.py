@@ -25,6 +25,7 @@ class Conversation(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     share_token = Column(String, unique=True, nullable=True, index=True)
     share_enabled = Column(Boolean, nullable=False, default=False)
+    share_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="conversations")

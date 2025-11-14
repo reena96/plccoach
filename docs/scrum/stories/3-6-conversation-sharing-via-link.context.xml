@@ -1,0 +1,66 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.6</storyId>
+    <title>Conversation Sharing via Link</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-6-conversation-sharing-via-link.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a team leader</asA>
+    <iWant>to share helpful conversations with my team</iWant>
+    <soThat>everyone can benefit from the AI coach's guidance</soThat>
+    <tasks>
+      - Database migration: Add share_token (UUID), share_enabled (boolean), share_expires_at (timestamp)
+      - Backend: POST /api/conversations/{id}/share (generate token, enable sharing)
+      - Backend: GET /api/conversations/shared/{token} (view shared conversation)
+      - Backend: DELETE /api/conversations/{id}/share (disable sharing)
+      - Frontend: Share button, modal, shared view (DEFER to Story 3.11)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Generate Share Link:** POST endpoint creates unique token, sets share_enabled=true, returns share URL
+    2. **View Shared Conversation:** GET endpoint returns conversation if share_enabled=true and not expired
+    3. **Disable Sharing:** DELETE endpoint sets share_enabled=false, invalidates link
+  </acceptanceCriteria>
+
+  <artifacts>
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" lines="10-34" reason="Add share_token, share_enabled, share_expires_at fields"/>
+      <artifact path="api-service/app/routers/conversations.py" kind="router" symbol="conversations" lines="1-125" reason="Add share endpoints"/>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" reason="API endpoints"/>
+        <package name="SQLAlchemy" reason="ORM for database"/>
+        <package name="alembic" reason="Database migration"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Share token must be unique UUID
+    - Expired shares return 404
+    - Only conversation owner can generate/disable share
+    - Shared conversations are read-only
+  </constraints>
+
+  <interfaces>
+    <interface name="POST /api/conversations/{id}/share" kind="REST endpoint" signature="POST /api/conversations/{id}/share?expires_in_days={int}" reason="Generate share link"/>
+    <interface name="GET /api/conversations/shared/{token}" kind="REST endpoint" signature="GET /api/conversations/shared/{token}" reason="View shared conversation"/>
+    <interface name="DELETE /api/conversations/{id}/share" kind="REST endpoint" signature="DELETE /api/conversations/{id}/share" reason="Disable sharing"/>
+  </interfaces>
+
+  <tests>
+    <ideas>
+      - Unit test: Generate share token creates unique UUID
+      - Unit test: Expired shares return 404
+      - Integration test: Generate and access shared link
+      - Integration test: Disabled shares return 404
+    </ideas>
+  </tests>
+</story-context>
