@@ -1,0 +1,130 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>PostgreSQL pgvector Setup & Data Upload</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-4-postgresql-pgvector-setup-data-upload.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>backend developer</asA>
+    <iWant>to store vector embeddings in PostgreSQL using pgvector extension</iWant>
+    <soThat>semantic search can be performed directly in the database</soThat>
+    <tasks>
+      - Create Alembic migration for embeddings table
+      - Add pgvector extension installation
+      - Create embeddings table with vector(3072) column
+      - Create ivfflat index for similarity search
+      - Create upload script to read embeddings from S3
+      - Implement batch upload logic (1000 per batch)
+      - Add progress tracking
+      - Create test queries for semantic search
+      - Validate query performance (<500ms)
+      - Add comprehensive tests
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. pgvector Extension:
+       - CREATE EXTENSION IF NOT EXISTS vector
+       - Verify extension installed
+
+    2. Embeddings Table:
+       - id (UUID primary key)
+       - content (TEXT)
+       - embedding (vector(3072))
+       - metadata (JSONB)
+       - created_at (TIMESTAMP)
+
+    3. ivfflat Index:
+       - Created for fast similarity search
+       - Uses vector_cosine_ops
+       - lists = 100
+
+    4. Data Upload:
+       - All embeddings from Story 2.3 uploaded
+       - Metadata preserved
+       - Batch upload (1000 per batch)
+
+    5. Semantic Search:
+       - Test query returns results
+       - Performance <500ms for top-10
+       - Cosine similarity (<=>)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-2-core-ai-coach.md</path>
+        <title>Epic 2: Core AI Coach</title>
+        <section>Story 2.4: PostgreSQL pgvector Setup & Data Upload</section>
+        <snippet>Store vector embeddings in PostgreSQL using pgvector for semantic search</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>alembic/versions/xxx_add_embeddings_table.py</path>
+        <purpose>Database migration for embeddings table</purpose>
+      </file>
+      <file>
+        <path>scripts/content-ingestion/04_upload_to_db.py</path>
+        <purpose>Upload embeddings to database</purpose>
+      </file>
+      <file>
+        <path>scripts/content-ingestion/03_generate_embeddings.py</path>
+        <purpose>Story 2.3 - provides embeddings</purpose>
+        <dependency>true</dependency>
+      </file>
+    </code>
+    <dependencies>
+      <package>pgvector==0.2.4</package>
+      <package>alembic==1.13.1</package>
+      <package>SQLAlchemy==2.0.25</package>
+      <package>psycopg2-binary==2.9.9</package>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Install pgvector extension in PostgreSQL 15
+    - Use cosine similarity (<=>) for vector comparison
+    - ivfflat index: good for <1M vectors
+    - Bulk insert in batches of 1000
+    - Must use embeddings from Story 2.3
+    - Query performance target: <500ms
+  </constraints>
+
+  <interfaces>
+    <input>
+      <source>S3 bucket: plccoach-content/embeddings/ (from Story 2.3)</source>
+      <format>JSON files with embeddings</format>
+    </input>
+    <output>
+      <destination>PostgreSQL database: embeddings table</destination>
+      <format>Rows with vector embeddings and metadata</format>
+    </output>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests for table creation
+      Integration tests for data upload
+      Performance tests for similarity search
+      Validation tests for data integrity
+    </standards>
+    <locations>
+      - tests/embeddings/
+      - alembic/versions/
+    </locations>
+    <ideas>
+      - AC#1: Test pgvector extension installation
+      - AC#2: Verify table schema correctness
+      - AC#3: Test ivfflat index creation
+      - AC#4: Test batch upload with sample data
+      - AC#5: Test semantic search queries
+      - AC#5: Verify query performance <500ms
+    </ideas>
+  </tests>
+</story-context>

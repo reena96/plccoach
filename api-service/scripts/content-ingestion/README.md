@@ -61,8 +61,29 @@ python 03_generate_embeddings.py --bucket plccoach-content --input-prefix chunke
 - Real-time cost tracking
 - Progress logging
 
-### Stage 4: Database Upload (Story 2.4)
-_Coming next_
+### Stage 4: Database Upload (`04_upload_to_db.py`)
+Uploads vector embeddings to PostgreSQL with pgvector extension.
+
+**Input:** JSON files with embeddings (`embeddings/` prefix in S3)
+**Output:** PostgreSQL embeddings table with pgvector index
+
+**Prerequisites:**
+```bash
+# Run database migration first
+alembic upgrade head
+```
+
+**Usage:**
+```bash
+python 04_upload_to_db.py --bucket plccoach-content --input-prefix embeddings/
+```
+
+**Features:**
+- pgvector extension setup
+- ivfflat index for fast similarity search
+- Batch upload (1000 embeddings per batch)
+- Metadata indexing for filtering
+- Similarity search testing
 
 ## Setup
 
