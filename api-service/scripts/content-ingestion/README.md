@@ -23,8 +23,24 @@ python 01_extract_pdfs.py --bucket plccoach-content --input-prefix raw/ --output
 - S3 integration
 - Processing logs
 
-### Stage 2: Content Chunking (Story 2.2)
-_Coming next_
+### Stage 2: Content Chunking (`02_chunk_content.py`)
+Splits book content into semantic chunks with metadata tagging.
+
+**Input:** JSON files with extracted book content (`processed/` prefix)
+**Output:** JSON files with chunked content and metadata (`chunked/` prefix)
+
+**Usage:**
+```bash
+python 02_chunk_content.py --bucket plccoach-content --input-prefix processed/ --output-prefix chunked/
+```
+
+**Features:**
+- Intelligent chunking (500-1000 tokens per chunk)
+- 100-token overlap between chunks
+- Semantic boundary detection
+- Rich metadata tagging
+- Domain classification (rule-based)
+- Quality validation
 
 ### Stage 3: Embedding Generation (Story 2.3)
 _Coming next_
