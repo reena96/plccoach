@@ -22,34 +22,13 @@ async def google_login(request: Request):
     """
     Initiate Google OAuth login flow.
 
-    Generates CSRF state token, stores in cookie, and redirects to Google consent screen.
+    Authlib automatically generates and stores state in session for CSRF protection.
     """
-    # Generate random state parameter for CSRF protection
-    state = str(uuid.uuid4())
-
     # Build redirect URI
     redirect_uri = settings.google_redirect_uri
 
-    # Create redirect response to Google OAuth authorization
-    # Note: authlib will automatically add state parameter
-    redirect_url = await oauth.google.authorize_redirect(
-        request,
-        redirect_uri,
-        state=state
-    )
-
-    # Set state cookie for validation in callback
-    response = RedirectResponse(url=str(redirect_url.headers['location']))
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        httponly=True,
-        secure=settings.environment == "production",
-        samesite="lax",
-        max_age=600  # 10 minutes
-    )
-
-    return response
+    # Let authlib handle state generation and storage automatically
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/google/callback")
@@ -60,21 +39,11 @@ async def google_callback(
     """
     Handle Google OAuth callback.
 
-    Validates state parameter, exchanges authorization code for tokens,
-    verifies JWT, creates/updates user, creates session, and redirects to dashboard.
+    Authlib automatically validates state parameter (CSRF protection),
+    exchanges authorization code for tokens, creates/updates user, and creates session.
     """
-    # Get state from cookie
-    state_cookie = request.cookies.get("oauth_state")
-
-    # Get state from query parameter
-    state_param = request.query_params.get("state")
-
-    # Validate state parameter (CSRF protection)
-    if not state_cookie or not state_param or state_cookie != state_param:
-        raise HTTPException(status_code=403, detail="Invalid state parameter")
-
     try:
-        # Exchange authorization code for tokens
+        # Exchange authorization code for tokens (authlib validates state automatically)
         token = await oauth.google.authorize_access_token(request)
 
         # Parse ID token (includes user profile data)
@@ -102,8 +71,8 @@ async def google_callback(
         # Create session
         user_session = create_session(db=db, user_id=user.id)
 
-        # Create redirect response to dashboard
-        response = RedirectResponse(url="/dashboard", status_code=302)
+        # Create redirect response to dashboard (frontend)
+        response = RedirectResponse(url=f"{settings.frontend_url}/dashboard", status_code=302)
 
         # Set session cookie
         response.set_cookie(
@@ -115,8 +84,6 @@ async def google_callback(
             max_age=settings.session_max_age
         )
 
-        # Delete state cookie (no longer needed)
-        response.delete_cookie(key="oauth_state")
 
         return response
 
@@ -135,34 +102,13 @@ async def clever_login(request: Request):
     """
     Initiate Clever OAuth login flow.
 
-    Generates CSRF state token, stores in cookie, and redirects to Clever consent screen.
+    Authlib automatically generates and stores state in session for CSRF protection.
     """
-    # Generate random state parameter for CSRF protection
-    state = str(uuid.uuid4())
-
     # Build redirect URI
     redirect_uri = settings.clever_redirect_uri
 
-    # Create redirect response to Clever OAuth authorization
-    # Note: authlib will automatically add state parameter
-    redirect_url = await oauth.clever.authorize_redirect(
-        request,
-        redirect_uri,
-        state=state
-    )
-
-    # Set state cookie for validation in callback
-    response = RedirectResponse(url=str(redirect_url.headers['location']))
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        httponly=True,
-        secure=settings.environment == "production",
-        samesite="lax",
-        max_age=600  # 10 minutes
-    )
-
-    return response
+    # Let authlib handle state generation and storage automatically
+    return await oauth.clever.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/clever/callback")
@@ -173,22 +119,11 @@ async def clever_callback(
     """
     Handle Clever OAuth callback.
 
-    Validates state parameter, exchanges authorization code for tokens,
-    maps Clever roles to application roles, creates/updates user, creates session,
-    and redirects to dashboard.
+    Authlib automatically validates state parameter (CSRF protection),
+    exchanges authorization code for tokens, maps Clever roles, and creates session.
     """
-    # Get state from cookie
-    state_cookie = request.cookies.get("oauth_state")
-
-    # Get state from query parameter
-    state_param = request.query_params.get("state")
-
-    # Validate state parameter (CSRF protection)
-    if not state_cookie or not state_param or state_cookie != state_param:
-        raise HTTPException(status_code=403, detail="Invalid state parameter")
-
     try:
-        # Exchange authorization code for tokens
+        # Exchange authorization code for tokens (authlib validates state automatically)
         token = await oauth.clever.authorize_access_token(request)
 
         # Parse ID token (includes user profile data)
@@ -237,8 +172,8 @@ async def clever_callback(
         # Create session
         user_session = create_session(db=db, user_id=user.id)
 
-        # Create redirect response to dashboard
-        response = RedirectResponse(url="/dashboard", status_code=302)
+        # Create redirect response to dashboard (frontend)
+        response = RedirectResponse(url=f"{settings.frontend_url}/dashboard", status_code=302)
 
         # Set session cookie
         response.set_cookie(
@@ -250,8 +185,6 @@ async def clever_callback(
             max_age=settings.session_max_age
         )
 
-        # Delete state cookie (no longer needed)
-        response.delete_cookie(key="oauth_state")
 
         return response
 

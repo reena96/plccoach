@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     clever_client_secret: str = ""
     clever_redirect_uri: str = "http://localhost:8000/auth/clever/callback"
 
+    # Frontend
+    frontend_url: str = "http://localhost:5173"  # Frontend URL for OAuth redirects
+
     # Session
     session_cookie_name: str = "plc_session"
     session_max_age: int = 86400  # 24 hours in seconds (absolute expiry)
@@ -50,9 +53,10 @@ class Settings(BaseSettings):
     cleanup_schedule_hour: int = 2  # Hour (0-23) to run daily session cleanup (UTC)
 
     model_config = SettingsConfigDict(
-        # Note: env_file removed to allow docker-compose environment variables
-        # to take precedence. For local dev without docker-compose, set vars directly.
-        case_sensitive=False
+        env_file=".env",  # Load from .env file for local development
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"  # Ignore extra fields in .env
     )
 
 
