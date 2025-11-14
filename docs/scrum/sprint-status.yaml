@@ -58,7 +58,7 @@ development_status:
   2-2-content-chunking-with-metadata-tagging: done
   2-3-vector-embeddings-generation: done
   2-4-postgresql-pgvector-setup-data-upload: done
-  2-5-intent-classification-domain-routing: backlog
+  2-5-intent-classification-domain-routing: in-progress
   2-6-semantic-retrieval-service: backlog
   2-7-response-generation-with-citations: backlog
   2-8-chat-api-endpoints: backlog
