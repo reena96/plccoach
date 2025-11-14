@@ -72,16 +72,16 @@ development_status:
   epic-3: in-progress
   3-1-multi-turn-conversation-context-management: review
   3-2-conversation-persistence-auto-save: review
-  3-3-conversation-list-sidebar: backlog
-  3-4-new-conversation-clear-context: backlog
-  3-5-conversation-search-filtering: backlog
-  3-6-conversation-sharing-via-link: backlog
-  3-7-conversation-archiving: backlog
-  3-8-conversation-deletion: backlog
-  3-9-conversation-export-pdf-text: backlog
-  3-10-all-7-knowledge-domains-operational: backlog
-  3-11-conversation-ui-polish-responsiveness: backlog
-  3-12-integration-testing-bug-fixes: backlog
+  3-3-conversation-list-sidebar: ready-for-dev
+  3-4-new-conversation-clear-context: drafted
+  3-5-conversation-search-filtering: drafted
+  3-6-conversation-sharing-via-link: drafted
+  3-7-conversation-archiving: drafted
+  3-8-conversation-deletion: drafted
+  3-9-conversation-export-pdf-text: drafted
+  3-10-all-7-knowledge-domains-operational: drafted
+  3-11-conversation-ui-polish-responsiveness: drafted
+  3-12-integration-testing-bug-fixes: drafted
   epic-3-retrospective: optional
 
   # Epic 4: Analytics, Feedback & Production Polish (13 stories, 2-3 weeks)

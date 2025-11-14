@@ -1,0 +1,195 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.3</storyId>
+    <title>Conversation List Sidebar</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-3-conversation-list-sidebar.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>to see a list of my past conversations</iWant>
+    <soThat>I can easily navigate between different coaching sessions</soThat>
+    <tasks>
+      - Create API endpoint for fetching conversations (AC: #1, #4)
+        - Implement GET /api/conversations endpoint
+        - Add query parameters: user_id, limit (default=20), offset
+        - Order by updated_at DESC
+        - Return conversation list with: id, title, first_message_preview, updated_at
+        - Add pagination metadata to response
+      - Create ConversationList React component (AC: #1, #2, #3)
+        - Set up component file: frontend/src/components/conversation/ConversationList.tsx
+        - Implement conversation item rendering
+        - Display title, preview (60 chars), and timestamp
+        - Add active conversation highlighting
+        - Handle click to load conversation
+      - Implement timestamp formatting (AC: #2)
+        - Use relative time for recent conversations ("2 hours ago", "3 days ago")
+        - Use absolute date for older conversations (>7 days)
+        - Consider using date-fns or similar library
+      - Implement pagination with infinite scroll (AC: #4)
+        - Use React Query for data fetching and caching
+        - Implement useInfiniteQuery for pagination
+        - Add intersection observer for infinite scroll trigger
+        - Show loading spinner while fetching next page
+      - Add mobile responsiveness (AC: #5)
+        - Hide sidebar by default on mobile (<768px)
+        - Add hamburger menu button
+        - Implement toggle functionality
+        - Sidebar full width on mobile when open
+        - Close sidebar after selecting conversation on mobile
+      - Implement "New Conversation" button (UI only, functionality in Story 3.4)
+        - Add button at top of sidebar
+        - Style consistently with design system
+        - Wire up to future new conversation handler (placeholder for now)
+      - Testing and validation (AC: all)
+        - Unit test: ConversationList component rendering
+        - Unit test: Timestamp formatting
+        - Integration test: Pagination and infinite scroll
+        - Integration test: Conversation selection
+        - Responsive test: Mobile sidebar toggle
+        - Validation guide created
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Sidebar Display:**
+       - Given I have multiple saved conversations
+       - When I view the chat page
+       - Then I see a left sidebar with a list of my conversations
+       - And conversations are ordered by updated_at (most recent first)
+
+    2. **Conversation Item Display:**
+       - Given I view the conversation list
+       - When I look at each conversation item
+       - Then each item shows:
+         - Conversation title (auto-generated or user-edited)
+         - Preview of first message (first 60 characters)
+         - Timestamp (relative: "2 hours ago", "3 days ago", or absolute for older)
+         - Unread indicator if new messages (future enhancement - can defer)
+
+    3. **Conversation Selection:**
+       - Given I click on a conversation in the sidebar
+       - When it loads
+       - Then all messages in that conversation are displayed in the main chat area
+       - And the conversation is highlighted in the sidebar as active
+
+    4. **Pagination & Infinite Scroll:**
+       - Given the sidebar contains many conversations (>20)
+       - When I scroll down
+       - Then conversations are loaded with pagination (20 at a time)
+       - And additional conversations load as I scroll (infinite scroll)
+
+    5. **Mobile Responsiveness:**
+       - Given I am on mobile
+       - When I view the chat page
+       - Then the sidebar is hidden by default
+       - And a hamburger menu button toggles the sidebar visibility
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/epics/epic-3-conversations-history.md" title="Epic 3: Conversations & History" section="Story 3.3" snippet="Enable conversation list sidebar with pagination, mobile responsiveness, and conversation selection. Display title, preview, timestamp for each conversation ordered by updated_at DESC."/>
+      <doc path="docs/scrum/stories/3-2-conversation-persistence-auto-save.md" title="Story 3.2 Learnings" section="Completion Notes" snippet="Database pattern: Use db session with SQLAlchemy ORM. Conversation model has id, user_id, title, status, created_at, updated_at. Query pattern: ORDER BY updated_at DESC for chronological sorting. UUID handling with UUID() constructor."/>
+    </docs>
+
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" lines="10-34" reason="SQLAlchemy model for conversations. Fields: id, user_id, title, status, created_at, updated_at. Need to query this for conversation list."/>
+      <artifact path="api-service/app/models/message.py" kind="model" symbol="Message" lines="10-44" reason="SQLAlchemy model for messages. Need to query first message for preview text (first 60 chars of content)."/>
+      <artifact path="api-service/app/routers/coach.py" kind="router" symbol="query_coach" lines="75-264" reason="Reference for database session pattern, UUID handling, and response structure. Shows how to use db: Session = Depends(get_db)."/>
+      <artifact path="api-service/app/routers/conversations.py" kind="router" symbol="conversations" lines="1-4" reason="Placeholder router for conversation endpoints. MODIFY to add GET /api/conversations endpoint."/>
+      <artifact path="api-service/app/services/database.py" kind="service" symbol="get_db" lines="106-122" reason="Database session dependency. Use this for DB access in new conversations endpoint."/>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.109.0" reason="REST API framework for GET /api/conversations endpoint"/>
+        <package name="SQLAlchemy" version="2.0.25" reason="ORM for querying conversations and messages"/>
+        <package name="psycopg2-binary" version="2.9.9" reason="PostgreSQL adapter"/>
+        <package name="pydantic" version="2.5.3" reason="Request/response validation"/>
+        <package name="pytest" version="7.4.4" reason="Testing framework"/>
+      </python>
+      <javascript>
+        <package name="react" version="TBD" reason="Frontend framework for ConversationList component"/>
+        <package name="typescript" version="TBD" reason="Type safety for components"/>
+        <package name="@tanstack/react-query" version="TBD" reason="Data fetching, caching, and pagination (useInfiniteQuery)"/>
+        <package name="date-fns" version="TBD" reason="Timestamp formatting (relative time)"/>
+        <package name="@testing-library/react" version="TBD" reason="Component testing"/>
+        <package name="jest" version="TBD" reason="Unit testing framework"/>
+      </javascript>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - **CRITICAL PREREQUISITE**: Frontend application must be initialized (React + TypeScript setup). Story 1.7 (Frontend Application Shell) required.
+    - **Conversation Model**: MUST use existing Conversation model from app/models/conversation.py. Do not create new model.
+    - **Message Model**: MUST use existing Message model for first message preview query.
+    - **Database Session**: Use db: Session = Depends(get_db) pattern established in Story 3.2.
+    - **Pagination**: 20 conversations per page (configurable via query param).
+    - **Ordering**: MUST order by updated_at DESC (most recent first).
+    - **Preview Text**: First 60 characters of first message content (role='user').
+    - **Sidebar Width**: 280px on desktop, full width (100vw) on mobile.
+    - **Mobile Breakpoint**: 768px (standard tablet breakpoint).
+    - **User Authorization**: Filter conversations by user_id (from X-User-Id header temporarily).
+    - **Response Format**: Include pagination metadata (total, limit, offset, has_more).
+    - **Component Location**: frontend/src/components/conversation/ConversationList.tsx.
+    - **Timestamp Format**: Relative for <7 days, absolute for >=7 days.
+    - **Future Enhancement**: Unread indicator mentioned in AC #2 can be deferred to later story.
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/conversations" kind="REST endpoint" signature="GET /api/conversations?user_id={uuid}&limit={int}&offset={int}" path="api-service/app/routers/conversations.py" reason="NEW endpoint to add. Returns paginated list of conversations for a user."/>
+    <interface name="ConversationListResponse" kind="response_model" signature="ConversationListResponse(conversations: list[ConversationItem], total: int, limit: int, offset: int, has_more: bool)" path="api-service/app/routers/conversations.py" reason="NEW Pydantic model for API response."/>
+    <interface name="ConversationItem" kind="response_model" signature="ConversationItem(id: str, title: str, first_message_preview: str, updated_at: datetime, message_count: int)" path="api-service/app/routers/conversations.py" reason="NEW Pydantic model for single conversation in list."/>
+    <interface name="ConversationList" kind="React component" signature="ConversationList({ userId, onSelectConversation })" path="frontend/src/components/conversation/ConversationList.tsx" reason="NEW React component to create."/>
+    <interface name="useConversations" kind="React Query hook" signature="useConversations(userId: string, limit: number)" path="frontend/src/hooks/useConversations.ts" reason="NEW hook using useInfiniteQuery for pagination."/>
+    <interface name="formatTimestamp" kind="utility function" signature="formatTimestamp(date: Date): string" path="frontend/src/utils/formatTimestamp.ts" reason="NEW utility for relative/absolute timestamp formatting."/>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Backend: Use pytest for all tests. Follow existing patterns in api-service/tests/.
+      - Unit tests: Test endpoint logic with mocked database
+      - Integration tests: Use real test database (SQLite in-memory or PostgreSQL)
+      - Test file naming: test_*.py
+      - Verify response structure, pagination metadata, ordering
+
+      Frontend: Use Jest + React Testing Library for component tests.
+      - Unit tests: Test component rendering, timestamp formatting
+      - Integration tests: Test pagination, infinite scroll, conversation selection
+      - Responsive tests: Test mobile breakpoints
+      - Mock API calls with MSW (Mock Service Worker)
+    </standards>
+
+    <locations>
+      - api-service/tests/unit/test_conversations_list.py (create)
+      - api-service/tests/integration/test_conversations_pagination.py (create)
+      - frontend/src/components/conversation/__tests__/ConversationList.test.tsx (create)
+      - frontend/src/utils/__tests__/formatTimestamp.test.ts (create)
+    </locations>
+
+    <ideas>
+      - AC #1: Unit test GET /api/conversations returns conversations ordered by updated_at DESC
+      - AC #1: Integration test conversation list for user with multiple conversations
+      - AC #2: Unit test formatTimestamp returns relative time for recent dates
+      - AC #2: Unit test formatTimestamp returns absolute date for dates >7 days old
+      - AC #2: Unit test ConversationItem displays title, preview (60 chars), timestamp
+      - AC #3: Integration test clicking conversation loads messages
+      - AC #3: Unit test active conversation highlighted in sidebar
+      - AC #4: Integration test pagination loads 20 conversations at a time
+      - AC #4: Integration test infinite scroll triggers next page load
+      - AC #4: Unit test pagination metadata (total, has_more) correct
+      - AC #5: Responsive test sidebar hidden on mobile by default
+      - AC #5: Responsive test hamburger button toggles sidebar visibility
+      - Edge case: Empty conversation list (user has no conversations)
+      - Edge case: Single conversation (no scrolling needed)
+      - Edge case: Exactly 20 conversations (boundary test)
+      - Edge case: 100+ conversations (performance test)
+      - Edge case: Very long conversation titles (truncation)
+      - Edge case: Conversations with no messages (should not appear or show empty preview)
+    </ideas>
+  </tests>
+</story-context>
