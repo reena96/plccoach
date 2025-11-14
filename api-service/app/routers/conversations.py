@@ -416,3 +416,48 @@ async def unarchive_conversation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to unarchive conversation: {str(e)}"
         )
+
+
+# Story 3.8: Conversation Deletion
+@router.delete("/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    user_id: str = Query(..., description="User ID (conversation owner)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Permanently delete a conversation and all its messages.
+
+    AC #1: Hard delete with CASCADE (messages deleted automatically)
+    AC #3: No undo - deletion is permanent
+    """
+    try:
+        # Find conversation
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id  # Verify ownership
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or you don't have permission"
+            )
+
+        # Delete conversation (CASCADE deletes all messages)
+        db.delete(conversation)
+        db.commit()
+
+        logger.info(f"Conversation {conversation_id} deleted by user {user_id}")
+
+        return {"message": "Conversation deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting conversation: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete conversation: {str(e)}"
+        )

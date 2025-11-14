@@ -1,0 +1,41 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.8</storyId>
+    <title>Conversation Deletion</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/3-8-conversation-deletion.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an educator</asA>
+    <iWant>to delete conversations I no longer need</iWant>
+    <soThat>my conversation history stays organized and relevant</soThat>
+    <tasks>
+      - Backend: DELETE /api/conversations/{id} (hard delete with CASCADE)
+      - Ownership verification (only owner can delete)
+      - Frontend: Delete button with confirmation modal (DEFER to Story 3.11)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. **Delete Conversation:** DELETE endpoint permanently removes conversation and all messages (CASCADE)
+    2. **Confirmation:** Frontend shows confirmation modal before deletion (deferred)
+    3. **No Undo:** Deletion is permanent, no recovery option
+  </acceptanceCriteria>
+
+  <artifacts>
+    <code>
+      <artifact path="api-service/app/models/conversation.py" kind="model" symbol="Conversation" line="31" reason="CASCADE delete already configured: cascade='all, delete-orphan'"/>
+      <artifact path="api-service/app/routers/conversations.py" kind="router" symbol="conversations" reason="Add delete endpoint"/>
+    </code>
+  </artifacts>
+
+  <constraints>
+    - CASCADE delete already configured in model
+    - Only conversation owner can delete
+    - Hard delete (permanent, no soft delete)
+  </constraints>
+</story-context>
