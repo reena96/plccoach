@@ -31,3 +31,13 @@ python-dotenv==1.0.0
 
 # Background Jobs
 apscheduler==3.10.4
+
+# Epic 2: AI Coach (OpenAI Integration)
+openai==1.12.0
+tiktoken==0.5.2
+tenacity==8.2.3  # For retry logic
+
+# Epic 2: Content Processing
+PyMuPDF==1.23.21  # For PDF extraction
+numpy==1.26.3  # For embeddings
+tqdm==4.66.1  # For progress bars

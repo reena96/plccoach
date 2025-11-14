@@ -1,0 +1,133 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.2</storyId>
+    <title>Content Chunking with Metadata Tagging</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-2-content-chunking-with-metadata-tagging.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>content engineer</asA>
+    <iWant>to split processed book content into semantic chunks with rich metadata</iWant>
+    <soThat>each chunk can be embedded and retrieved independently</soThat>
+    <tasks>
+      - Install tiktoken dependency
+      - Create chunking script structure
+      - Implement token counting with tiktoken
+      - Implement semantic boundary detection
+      - Implement overlap management (100 tokens)
+      - Create metadata tagging logic
+      - Implement domain classification (manual or GPT-4o)
+      - Add S3 integration for input/output
+      - Add quality assurance checks
+      - Create comprehensive tests
+      - Process sample content
+      - Validate output quality
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Chunking Algorithm:
+       - Target size: 500-1000 tokens per chunk
+       - 100-token overlap between consecutive chunks
+       - Semantic boundaries respected (no mid-paragraph splits)
+       - Related elements kept together (list items + explanations)
+
+    2. Metadata Tagging:
+       - chunk_id (UUID)
+       - book_id (UUID from Story 2.1)
+       - book_title, authors, chapter info
+       - page_start, page_end
+       - chunk_index, total_chunks_in_chapter
+       - content (text)
+       - token_count (actual tokens)
+       - primary_domain, secondary_domains
+
+    3. Domain Classification:
+       - Manual tagging for initial corpus OR
+       - GPT-4o automatic classification
+       - 7 domains: assessment, collaboration, leadership, curriculum, data_analysis, school_culture, student_learning
+
+    4. Quality Assurance:
+       - No chunks exceed 1000 tokens
+       - All chunks have required metadata fields
+       - Page numbers are accurate
+       - Output saved to S3
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-2-core-ai-coach.md</path>
+        <title>Epic 2: Core AI Coach</title>
+        <section>Story 2.2: Content Chunking with Metadata Tagging</section>
+        <snippet>Split processed book content into semantic chunks with rich metadata for embedding and retrieval</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>scripts/content-ingestion/02_chunk_content.py</path>
+        <purpose>Main chunking script</purpose>
+      </file>
+      <file>
+        <path>scripts/content-ingestion/01_extract_pdfs.py</path>
+        <purpose>Story 2.1 - provides input JSON files</purpose>
+        <dependency>true</dependency>
+      </file>
+    </code>
+    <dependencies>
+      <package>tiktoken</package>
+      <package>openai</package>
+      <package>boto3</package>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use tiktoken library (OpenAI tokenizer) for token counting
+    - Implement intelligent chunking algorithm
+    - For 15-20 books, manual domain tagging may be faster than automated
+    - Consider using section headers as context for each chunk
+    - Script location: /scripts/content-ingestion/02_chunk_content.py
+    - Must use output from Story 2.1 as input
+  </constraints>
+
+  <interfaces>
+    <input>
+      <source>S3 bucket: plccoach-content/processed/ (from Story 2.1)</source>
+      <format>JSON files with extracted book content</format>
+    </input>
+    <output>
+      <destination>S3 bucket: plccoach-content/chunked/</destination>
+      <format>JSON files with chunked content and metadata</format>
+    </output>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests for chunking logic
+      Unit tests for token counting
+      Unit tests for metadata structure
+      Integration tests for S3 interaction
+      Quality validation tests (token limits, metadata completeness)
+    </standards>
+    <locations>
+      - tests/content-ingestion/test_chunking.py
+      - scripts/content-ingestion/
+    </locations>
+    <ideas>
+      - AC#1: Test chunk sizes are 500-1000 tokens
+      - AC#1: Verify 100-token overlap between chunks
+      - AC#1: Test semantic boundary detection
+      - AC#1: Verify list items stay together
+      - AC#2: Validate all metadata fields are present
+      - AC#2: Test UUID generation for chunk_id
+      - AC#2: Verify page number accuracy
+      - AC#3: Test domain classification (manual or automated)
+      - AC#4: Test quality checks reject oversized chunks
+      - AC#4: Verify S3 upload/download
+    </ideas>
+  </tests>
+</story-context>

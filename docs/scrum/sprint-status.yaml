@@ -53,19 +53,19 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Core AI Coach (12 stories, 4-5 weeks)
-  epic-2: backlog
-  2-1-content-ingestion-pipeline-pdf-processing: backlog
-  2-2-content-chunking-with-metadata-tagging: backlog
-  2-3-vector-embeddings-generation: backlog
-  2-4-postgresql-pgvector-setup-data-upload: backlog
-  2-5-intent-classification-domain-routing: backlog
-  2-6-semantic-retrieval-service: backlog
-  2-7-response-generation-with-citations: backlog
-  2-8-chat-api-endpoints: backlog
-  2-9-chat-ui-component: backlog
-  2-10-example-questions-onboarding: backlog
-  2-11-error-handling-edge-cases: backlog
-  2-12-content-quality-assurance: backlog
+  epic-2: in-progress
+  2-1-content-ingestion-pipeline-pdf-processing: done
+  2-2-content-chunking-with-metadata-tagging: done
+  2-3-vector-embeddings-generation: done
+  2-4-postgresql-pgvector-setup-data-upload: done
+  2-5-intent-classification-domain-routing: done
+  2-6-semantic-retrieval-service: done
+  2-7-response-generation-with-citations: done
+  2-8-chat-api-endpoints: done
+  2-9-chat-ui-component: done
+  2-10-example-questions-onboarding: done
+  2-11-error-handling-edge-cases: done
+  2-12-content-quality-assurance: done
   epic-2-retrospective: optional
 
   # Epic 3: Conversations & History (12 stories, 2-3 weeks)

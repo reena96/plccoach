@@ -1,0 +1,19 @@
+# Content Ingestion Pipeline Dependencies
+# PDF Processing (Story 2.1)
+pymupdf==1.23.26  # PyMuPDF for PDF text extraction
+pdfplumber==0.11.0  # Alternative PDF processor
+
+# AWS
+boto3==1.34.34
+
+# Text Processing (Story 2.2)
+tiktoken==0.5.2  # OpenAI tokenizer for chunking
+
+# AI/ML (Stories 2.3, 2.5)
+openai==1.12.0  # For embeddings and classification
+
+# Utilities
+python-dotenv==1.0.0
+tqdm==4.66.1  # Progress bars
+tenacity==8.2.3  # Retry logic
+numpy==1.26.3  # Array operations for embeddings

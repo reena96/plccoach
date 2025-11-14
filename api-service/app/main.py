@@ -1,7 +1,10 @@
 """FastAPI application initialization."""
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -10,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.config import settings
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.logging import LoggingMiddleware
-from app.routers import health, auth, admin
+from app.routers import health, auth, admin, coach
 from app.services.database import SessionLocal
 from app.services.cleanup_service import delete_expired_sessions
 
@@ -95,6 +98,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(coach.router, tags=["coach"])  # Epic 2: AI Coach endpoint
 
 
 @app.get("/")
@@ -104,5 +108,15 @@ async def root():
         "service": settings.app_name,
         "version": settings.app_version,
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
+        "test_ui": "/test"
     }
+
+
+@app.get("/test")
+async def test_ui():
+    """Serve the test UI page."""
+    test_file = Path(__file__).parent.parent / "test-coach.html"
+    if test_file.exists():
+        return FileResponse(test_file)
+    return {"error": "Test page not found"}

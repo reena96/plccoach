@@ -43,6 +43,8 @@ services:
       - CLEVER_CLIENT_ID=${CLEVER_CLIENT_ID:-your-clever-client-id}
       - CLEVER_CLIENT_SECRET=${CLEVER_CLIENT_SECRET:-your-clever-client-secret}
       - CLEVER_REDIRECT_URI=http://localhost:8000/auth/clever/callback
+      # OpenAI API (Epic 2 - AI Coach)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       # Volume mounts for hot reload during development
       - ./app:/app/app

@@ -1,0 +1,125 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.1</storyId>
+    <title>Content Ingestion Pipeline - PDF Processing</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-1-content-ingestion-pipeline-pdf-processing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>content engineer</asA>
+    <iWant>to extract and process text from Solution Tree PDF books</iWant>
+    <soThat>the content can be prepared for embedding and semantic search</soThat>
+    <tasks>
+      - Set up scripts directory structure
+      - Install PDF processing dependencies (PyMuPDF or pdfplumber)
+      - Create S3 download functionality
+      - Implement text extraction logic
+      - Preserve document structure (headings, lists, tables)
+      - Remove page numbers, headers, footers
+      - Clean up OCR errors and whitespace
+      - Extract and structure metadata
+      - Upload processed content to S3
+      - Add error handling and logging
+      - Test with sample PDFs
+      - Process full corpus
+      - Validate output quality
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. PDF Text Extraction:
+       - Text extracted using PyMuPDF (fitz) or pdfplumber
+       - Document structure preserved (headings, lists, tables)
+       - Page numbers, headers, footers removed
+       - OCR errors cleaned up
+       - Whitespace normalized
+
+    2. Metadata Extraction and Structure:
+       - book_id (UUID)
+       - book_title
+       - authors (array)
+       - publication_year
+       - total_pages
+       - chapters array with: chapter_number, chapter_title, page_start, page_end, content
+
+    3. Output Storage:
+       - Processed content saved to S3
+       - JSON format with metadata
+       - Processing log records success/failure for each book
+
+    4. Quality Requirements:
+       - 15-20 Solution Tree books processed
+       - Markdown-style structure preserved
+       - Special characters and encoding handled properly
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-2-core-ai-coach.md</path>
+        <title>Epic 2: Core AI Coach</title>
+        <section>Story 2.1: Content Ingestion Pipeline - PDF Processing</section>
+        <snippet>Extract and process text from Solution Tree PDF books, preserving structure and metadata for embedding and semantic search</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>scripts/content-ingestion/01_extract_pdfs.py</path>
+        <purpose>Main PDF extraction script</purpose>
+      </file>
+    </code>
+    <dependencies>
+      <package>pymupdf</package>
+      <package>pdfplumber</package>
+      <package>boto3</package>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use PyMuPDF (fitz) or pdfplumber for extraction
+    - Preserve markdown-style structure (# for headings, lists, etc.)
+    - Handle special characters and encoding properly
+    - Initial corpus: Learning by Doing, Collaborative Common Assessments, Simplifying Response to Intervention, etc.
+    - Script location: /scripts/content-ingestion/01_extract_pdfs.py
+    - Must work with S3 buckets created in Epic 1 Story 1.1
+  </constraints>
+
+  <interfaces>
+    <input>
+      <source>S3 bucket: plccoach-content</source>
+      <format>PDF files (Solution Tree books)</format>
+    </input>
+    <output>
+      <destination>S3 bucket: plccoach-content (processed/ folder)</destination>
+      <format>JSON files with extracted text and metadata</format>
+    </output>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests for text extraction functions
+      Integration tests for S3 interaction
+      Validation tests for metadata structure
+      Manual QA of extracted content quality
+    </standards>
+    <locations>
+      - tests/content-ingestion/
+      - scripts/content-ingestion/
+    </locations>
+    <ideas>
+      - AC#1: Test PDF text extraction preserves structure
+      - AC#1: Verify headers/footers/page numbers are removed
+      - AC#1: Test whitespace normalization
+      - AC#2: Validate metadata structure matches spec
+      - AC#2: Test chapter extraction and page range accuracy
+      - AC#3: Test S3 upload functionality
+      - AC#3: Verify processing log captures all operations
+      - AC#4: Test with multiple PDF formats
+      - AC#4: Verify encoding handling for special characters
+    </ideas>
+  </tests>
+</story-context>
