@@ -74,3 +74,11 @@ htmlcov/
 *.tmp
 temp/
 tmp/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+tfplan
