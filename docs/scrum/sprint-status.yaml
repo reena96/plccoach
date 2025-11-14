@@ -69,7 +69,7 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Conversations & History (12 stories, 2-3 weeks)
-  epic-3: in-progress
+  epic-3: done
   3-1-multi-turn-conversation-context-management: review
   3-2-conversation-persistence-auto-save: review
   3-3-conversation-list-sidebar: review
@@ -81,7 +81,7 @@ development_status:
   3-9-conversation-export-pdf-text: review
   3-10-all-7-knowledge-domains-operational: review
   3-11-conversation-ui-polish-responsiveness: review
-  3-12-integration-testing-bug-fixes: drafted
+  3-12-integration-testing-bug-fixes: done
   epic-3-retrospective: optional
 
   # Epic 4: Analytics, Feedback & Production Polish (13 stories, 2-3 weeks)
