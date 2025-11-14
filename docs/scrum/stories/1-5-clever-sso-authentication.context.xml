@@ -1,0 +1,245 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.5</storyId>
+    <title>Clever SSO Authentication</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-5-clever-sso-authentication.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>educator at a school using Clever</asA>
+    <iWant>to log in using Clever SSO</iWant>
+    <soThat>I can access the PLC Coach with my school's single sign-on system</soThat>
+    <tasks>
+      - Configure Clever OAuth Client (AC: 1, 7)
+      - Implement Clever Login Endpoint (AC: 1)
+      - Implement Clever Callback Endpoint (AC: 2, 3, 4, 5, 6)
+      - Testing (AC: All)
+      - Documentation (AC: 7)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <description>Clever Login Initiation</description>
+      <detail>User clicks "Login with Clever" and is redirected to Clever's OAuth authorization page</detail>
+    </criterion>
+    <criterion id="AC2">
+      <description>Clever OAuth Callback & JIT Provisioning</description>
+      <detail>After authorization, new user record created with email, name, role='educator', sso_provider='clever', sso_id, organization_id from Clever district data</detail>
+    </criterion>
+    <criterion id="AC3">
+      <description>Session Creation & Redirect</description>
+      <detail>Secure 24-hour session created, session cookie set (httpOnly, secure, sameSite=lax), redirect to dashboard</detail>
+    </criterion>
+    <criterion id="AC4">
+      <description>Role Mapping from Clever</description>
+      <detail>If Clever provides district_admin or school_admin role, map to 'admin', otherwise default to 'educator'</detail>
+    </criterion>
+    <criterion id="AC5">
+      <description>Existing User Login</description>
+      <detail>Existing user's last_login, email, name updated on login, no duplicate records created</detail>
+    </criterion>
+    <criterion id="AC6">
+      <description>Error Handling</description>
+      <detail>OAuth failures return generic error message, details logged server-side, user not logged in</detail>
+    </criterion>
+    <criterion id="AC7">
+      <description>Configuration</description>
+      <detail>Clever Client ID and Secret loaded from environment variables or AWS Secrets Manager, not hardcoded</detail>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1 - Story 1.5 Requirements</title>
+        <section>Story 1.5: Clever SSO Authentication</section>
+        <snippet>Clever OAuth 2.0 integration for school district SSO. Extract organization/district data from Clever API. Handle role mapping from Clever to PLC Coach roles.</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-4-google-oidc-authentication.md</path>
+        <title>Previous Story - Google OAuth Pattern</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>OAuth pattern established using authlib. SessionMiddleware required. Reuse get_or_create_user() and create_session() functions from auth_service.py. Generic error messages with server-side logging.</snippet>
+      </doc>
+      <doc>
+        <path>api-service/tests/TESTING_OAUTH.md</path>
+        <title>OAuth Testing Documentation</title>
+        <section>OAuth Authentication Testing Guide</section>
+        <snippet>Unit tests for service functions, integration tests for OAuth flow using mocked responses with @patch and respx library.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/app/services/auth_service.py</path>
+        <kind>service</kind>
+        <symbol>oauth, get_or_create_user, create_session</symbol>
+        <lines>1-100</lines>
+        <reason>Existing OAuth client registration and JIT provisioning functions to REUSE for Clever (do not recreate)</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/routers/auth.py</path>
+        <kind>router</kind>
+        <symbol>google_login, google_callback</symbol>
+        <lines>20-124</lines>
+        <reason>OAuth endpoints pattern to follow for Clever (/auth/clever/login, /auth/clever/callback)</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/config.py</path>
+        <kind>configuration</kind>
+        <symbol>Settings</symbol>
+        <lines>35-43</lines>
+        <reason>Add Clever OAuth settings (clever_client_id, clever_client_secret, clever_redirect_uri) following Google pattern</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/main.py</path>
+        <kind>application</kind>
+        <symbol>SessionMiddleware</symbol>
+        <lines>32-39</lines>
+        <reason>SessionMiddleware configuration required for OAuth state storage (already configured)</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/models/user.py</path>
+        <kind>model</kind>
+        <symbol>User</symbol>
+        <lines>10-42</lines>
+        <reason>User model with sso_provider, sso_id, organization_id fields for Clever data</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/models/session.py</path>
+        <kind>model</kind>
+        <symbol>Session</symbol>
+        <lines>1-29</lines>
+        <reason>Session model for 24-hour session creation</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/test_auth_google.py</path>
+        <kind>test</kind>
+        <symbol>test_google_login_redirects_to_google, test_callback_creates_new_user</symbol>
+        <lines>1-340</lines>
+        <reason>OAuth integration test patterns to replicate for Clever</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/conftest.py</path>
+        <kind>test-fixture</kind>
+        <symbol>test_engine, db_session</symbol>
+        <lines>1-50</lines>
+        <reason>Test fixtures for database mocking and session management</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="authlib" version="1.3.0" />
+        <package name="httpx" version="0.26.0" />
+        <package name="itsdangerous" version="2.1.2" />
+        <package name="fastapi" version="0.109.0" />
+        <package name="pydantic" version="2.5.3" />
+        <package name="pydantic-settings" version="2.1.0" />
+        <package name="SQLAlchemy" version="2.0.25" />
+        <package name="psycopg2-binary" version="2.9.9" />
+        <package name="respx" version="0.20.2" />
+        <package name="pytest" version="7.4.4" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - REUSE existing functions: get_or_create_user() and create_session() from app/services/auth_service.py (DO NOT recreate)
+    - Follow OAuth pattern established in Story 1.4 (Google OAuth)
+    - Register Clever client in auth_service.py using oauth.register() with Clever OIDC discovery endpoint
+    - Use SessionMiddleware for OAuth state storage (already configured)
+    - Generic error messages to client, detailed logging server-side with logger.error(..., exc_info=True)
+    - CSRF protection with state parameter in httpOnly cookie (10-minute expiry)
+    - Session cookies: httpOnly=True, secure=True (production), sameSite='lax', 24-hour max_age
+    - Pydantic Settings v2: Use model_config = SettingsConfigDict
+    - SQLAlchemy 2.0: Import from sqlalchemy.orm
+    - Test using @patch for mocking OAuth responses, respx for HTTP mocking
+    - 100% test pass requirement maintained
+    - Docker development: docker-compose up for dev, docker-compose run --rm api pytest for tests
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GET /auth/clever/login</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        @router.get("/clever/login")
+        async def clever_login(request: Request)
+        Returns: RedirectResponse to Clever OAuth authorization URL
+        Sets: oauth_state cookie (httpOnly, 10-minute expiry)
+      </signature>
+      <path>api-service/app/routers/auth.py</path>
+    </interface>
+    <interface>
+      <name>GET /auth/clever/callback</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        @router.get("/clever/callback")
+        async def clever_callback(request: Request, db: Session = Depends(get_db))
+        Params: code (authorization code), state (CSRF token)
+        Returns: RedirectResponse to /dashboard
+        Sets: plc_session cookie (httpOnly, 24-hour expiry)
+      </signature>
+      <path>api-service/app/routers/auth.py</path>
+    </interface>
+    <interface>
+      <name>get_or_create_user</name>
+      <kind>function</kind>
+      <signature>
+        def get_or_create_user(db, email, name, sso_provider, sso_id, organization_id=None, role='educator') -> User
+        Creates new user or updates existing user profile and last_login
+      </signature>
+      <path>api-service/app/services/auth_service.py</path>
+    </interface>
+    <interface>
+      <name>create_session</name>
+      <kind>function</kind>
+      <signature>
+        def create_session(db, user_id) -> UserSession
+        Creates 24-hour session with timestamps
+      </signature>
+      <path>api-service/app/services/auth_service.py</path>
+    </interface>
+    <interface>
+      <name>Clever OAuth 2.0</name>
+      <kind>External API</kind>
+      <signature>
+        Authorization: https://clever.com/oauth/authorize
+        Token Exchange: https://clever.com/oauth/tokens
+        User Info: https://api.clever.com/v3.0/me
+        OIDC Discovery: https://clever.com/.well-known/openid-configuration
+        Scopes: openid email profile
+      </signature>
+      <path>External - Clever API</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework. Unit tests for service functions with mocked database. Integration tests for OAuth endpoints using FastAPI TestClient with @patch for OAuth responses and respx for HTTP mocking. All tests must pass (100% requirement). Test file location: api-service/tests/. Run tests with: docker-compose run --rm api pytest tests/ -v
+    </standards>
+    <locations>
+      - api-service/tests/test_auth_clever.py (new file)
+      - api-service/tests/test_auth_service.py (existing unit tests - should still pass)
+      - api-service/tests/conftest.py (test fixtures)
+      - api-service/tests/TESTING_OAUTH.md (update with Clever section)
+    </locations>
+    <ideas>
+      - AC1: Test clever login redirects to Clever OAuth with state cookie set
+      - AC2: Test JIT provisioning creates new user with correct fields (email, name, role='educator', sso_provider='clever', sso_id, organization_id)
+      - AC3: Test session creation and cookie attributes (httpOnly, secure, sameSite, 24h max_age)
+      - AC4: Test role mapping (district_admin → 'admin', school_admin → 'admin', teacher → 'educator')
+      - AC5: Test existing user login updates last_login, email, name without creating duplicates
+      - AC6: Test error handling (token exchange failure, missing userinfo, incomplete userinfo) returns generic message
+      - AC7: Test configuration loaded from environment variables
+      - Regression: Test callback rejects missing/mismatched state (CSRF protection)
+      - Regression: Test all existing Google OAuth tests still pass
+      - Regression: Test database connection and health endpoints still pass
+    </ideas>
+  </tests>
+</story-context>

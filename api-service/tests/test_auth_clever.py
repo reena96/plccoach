@@ -2,7 +2,7 @@
 import pytest
 import uuid
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -286,8 +286,8 @@ def test_callback_updates_existing_user(db_session):
         role='educator',
         sso_provider='clever',
         sso_id='clever-user-123',
-        created_at=datetime.utcnow(),
-        last_login=datetime.utcnow() - timedelta(days=1)
+        created_at=datetime.now(timezone.utc),
+        last_login=datetime.now(timezone.utc) - timedelta(days=1)
     )
     db_session.add(existing_user)
     db_session.commit()

@@ -44,8 +44,10 @@ class Settings(BaseSettings):
 
     # Session
     session_cookie_name: str = "plc_session"
-    session_max_age: int = 86400  # 24 hours in seconds
+    session_max_age: int = 86400  # 24 hours in seconds (absolute expiry)
+    session_inactivity_minutes: int = 30  # Inactivity timeout in minutes
     session_secret_key: str = ""  # For SessionMiddleware (OAuth state storage)
+    cleanup_schedule_hour: int = 2  # Hour (0-23) to run daily session cleanup (UTC)
 
     model_config = SettingsConfigDict(
         # Note: env_file removed to allow docker-compose environment variables

@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: plccoach-db-test
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=plccoach
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: plccoach-api
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      # Override .env file to use local test database
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/plccoach
+      - AWS_REGION=us-east-1
+      - DB_SECRET_NAME=plccoach-db-password
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=development
+      - SESSION_SECRET_KEY=dev-secret-key-for-oauth-state-change-in-production
+      # Real Google OAuth credentials (from .env)
+      - GOOGLE_CLIENT_ID=541993388762-fl23squpneq9soort2p0rs8cib2hqc5e.apps.googleusercontent.com
+      - GOOGLE_CLIENT_SECRET=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
+      - GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+      # Clever OAuth (placeholder for now)
+      - CLEVER_CLIENT_ID=your-clever-client-id
+      - CLEVER_CLIENT_SECRET=your-clever-client-secret
+      - CLEVER_REDIRECT_URI=http://localhost:8000/auth/clever/callback
+    volumes:
+      # Volume mounts for hot reload during development
+      - ./app:/app/app
+      - ./tests:/app/tests
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:

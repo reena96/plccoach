@@ -6,7 +6,10 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.services.database import get_db
-from app.services.auth_service import oauth, get_or_create_user, create_session
+from app.services.auth_service import oauth, get_or_create_user, create_session, delete_session, get_user_by_id
+from app.dependencies.session import get_current_session
+from app.models.session import Session as UserSession
+from app.schemas.user import UserProfileResponse
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -254,3 +257,83 @@ async def clever_callback(
         logger.error(f"Clever OAuth authentication failed: {str(e)}", exc_info=True)
         # Return generic error message to client (security best practice)
         raise HTTPException(status_code=401, detail="Authentication failed. Please try again.")
+
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Log out user by deleting session and clearing cookie.
+
+    Handles logout gracefully - always returns 200 OK even if session is invalid/missing.
+    This prevents information leakage about session validity.
+
+    AC1: Logout Functionality
+    - Deletes session from database
+    - Clears session cookie
+    - Returns 200 OK
+    - Subsequent requests with old cookie will be rejected (by session validation middleware)
+    """
+    # Extract session ID from cookie
+    session_cookie = request.cookies.get(settings.session_cookie_name)
+
+    if session_cookie:
+        try:
+            session_id = uuid.UUID(session_cookie)
+            # Delete session from database
+            delete_session(db=db, session_id=session_id)
+        except (ValueError, AttributeError) as e:
+            # Invalid session ID format - log but continue gracefully
+            logger.warning(f"Invalid session ID format during logout: {session_cookie}")
+
+    # Clear session cookie (set max_age=-1 to delete)
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        httponly=True,
+        secure=settings.environment == "production",
+        samesite="lax"
+    )
+
+    # Always return 200 OK, even if session was invalid/missing (AC1)
+    return {"message": "Logged out successfully"}
+
+
+@router.get("/me", response_model=UserProfileResponse, tags=["Authentication"])
+async def get_me(
+    session: UserSession = Depends(get_current_session),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user profile.
+
+    Returns the authenticated user's profile information.
+    Requires valid session cookie (validated by get_current_session dependency).
+
+    **AC1: GET /auth/me Endpoint**
+    - Returns 200 with user profile for valid session
+    - Excludes sensitive fields (sso_id) from response
+
+    **AC2: Unauthenticated Access**
+    - Returns 401 if session is invalid/expired (handled by get_current_session)
+
+    **AC8: Session Dependency Validation**
+    - Uses get_current_session() dependency from Story 1.6
+    - Session validation checks expiry and inactivity timeout
+    - Updates last_accessed_at on each request
+
+    Returns:
+        UserProfileResponse: User profile with id, email, name, role, organization, sso_provider, created_at, last_login
+    """
+    # Get user from database using session's user_id
+    user = get_user_by_id(db, session.user_id)
+
+    if not user:
+        # This should not happen if session is valid, but handle gracefully
+        logger.error(f"User not found for valid session - session_id: {session.id}, user_id: {session.user_id}")
+        raise HTTPException(status_code=401, detail="User not found")
+
+    # Return user profile (Pydantic automatically excludes sso_id field)
+    return UserProfileResponse.model_validate(user)

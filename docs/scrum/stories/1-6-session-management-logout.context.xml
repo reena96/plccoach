@@ -1,0 +1,240 @@
+<story-context id="{bmad_folder}/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.6</storyId>
+    <title>Session Management & Logout</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-6-session-management-logout.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>logged-in user</asA>
+    <iWant>to log out and have my session invalidated</iWant>
+    <soThat>my account is secure when I'm done using the application</soThat>
+    <tasks>
+      - Task 1: Implement Logout Endpoint (AC: 1, 6)
+      - Task 2: Implement Session Validation Middleware (AC: 2, 3, 4, 6)
+      - Task 3: Implement Background Session Cleanup Job (AC: 5, 6)
+      - Task 4: Update Session Management Service (AC: 3, 6)
+      - Task 5: Testing (AC: All)
+      - Task 6: Documentation (AC: 6)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Logout Functionality
+    - POST /auth/logout deletes session from database
+    - Session cookie is cleared
+    - Redirects to login page
+    - Subsequent requests with old session cookie return 401
+
+    AC2: Session Expiry (Inactivity Timeout)
+    - Sessions inactive for 30 minutes are considered expired
+    - Expired sessions return 401 Unauthorized
+
+    AC3: Session Activity Refresh
+    - Protected endpoint requests update last_accessed_at
+    - Session expiry extended by 30 minutes on activity
+
+    AC4: Session Validation Middleware
+    - All protected endpoints validate session
+    - Checks: exists in DB, not expired, within inactivity timeout
+    - Invalid sessions return 401
+
+    AC5: Background Session Cleanup
+    - Daily job deletes expired sessions (expires_at < now)
+    - Cleanup events are logged
+
+    AC6: Audit Logging
+    - All session lifecycle events logged (create, refresh, delete, expire)
+    - Logs include: timestamp, user_id, session_id, action, IP address
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.6: Session Management & Logout</section>
+        <snippet>Prerequisites: Story 1.5 (authentication must be working). Technical Notes: Implement session cleanup background job, session validation middleware, session refresh logic, audit logging.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/scrum/stories/1-4-google-oidc-authentication.md</path>
+        <title>Story 1.4: Google OIDC Authentication</title>
+        <section>Dev Notes - Session Creation Pattern</section>
+        <snippet>OAuth callback creates session via create_session() with 24-hour expiry. Session cookie configured with httpOnly, secure, sameSite=lax. SessionMiddleware critical for OAuth functionality.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/scrum/stories/1-5-clever-sso-authentication.md</path>
+        <title>Story 1.5: Clever SSO Authentication</title>
+        <section>Dev Agent Record - Learnings</section>
+        <snippet>Session infrastructure working correctly. create_session() in app/services/auth_service.py creates 24-hour sessions. last_accessed_at set on creation but not updated on activity. Testing infrastructure in tests/conftest.py.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/app/models/session.py</path>
+        <kind>model</kind>
+        <symbol>Session</symbol>
+        <lines>10-29</lines>
+        <reason>Existing session model with id, user_id, expires_at, created_at, last_accessed_at fields. This is the database model for server-side session storage.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/auth_service.py</path>
+        <kind>service</kind>
+        <symbol>create_session</symbol>
+        <lines>99-122</lines>
+        <reason>Existing session creation function. Sets 24-hour expiry and last_accessed_at. Must be extended with logging and potentially get_session_by_id(), update_session_activity() functions.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/services/auth_service.py</path>
+        <kind>service</kind>
+        <symbol>get_or_create_user</symbol>
+        <lines>39-96</lines>
+        <reason>User provisioning function used in OAuth flows. Updates last_login timestamp. Reference for logging patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/routers/auth.py</path>
+        <kind>router</kind>
+        <symbol>auth_router</symbol>
+        <lines>entire-file</lines>
+        <reason>Existing authentication endpoints (Google/Clever OAuth). Logout endpoint POST /auth/logout must be added here.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/main.py</path>
+        <kind>application</kind>
+        <symbol>app</symbol>
+        <lines>entire-file</lines>
+        <reason>FastAPI application instance. Session validation middleware or dependency must be registered here. Already has SessionMiddleware configured.</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/tests/conftest.py</path>
+        <kind>test-fixture</kind>
+        <symbol>test fixtures</symbol>
+        <lines>entire-file</lines>
+        <reason>Test database fixtures and configuration. Use for session management tests. Provides override_get_db fixture for testing.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.109.0" />
+        <package name="sqlalchemy" version="2.0.25" />
+        <package name="authlib" version="1.3.0" />
+        <package name="itsdangerous" version="2.1.2" reason="SessionMiddleware dependency" />
+        <package name="pytest" version="7.4.4" />
+        <package name="pytest-asyncio" version="0.23.3" />
+        <package name="uvicorn" version="0.27.0" />
+        <package name="apscheduler" version="TBD" note="Add for background session cleanup job" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - **Server-Side Sessions Only**: Use PostgreSQL sessions table, NOT JWT tokens
+    - **Session Timeouts**: 24-hour absolute expiry, 30-minute inactivity timeout
+    - **Middleware vs Dependency**: Prefer FastAPI Depends() over middleware for clarity and testability
+    - **Background Job**: Use APScheduler for in-process scheduling (simplest solution)
+    - **Logging Pattern**: Generic client messages, detailed server-side logs with logger.error(..., exc_info=True)
+    - **100% Test Coverage**: All tests must pass before marking story done
+    - **No New Models**: Extend existing Session model, don't create new tables
+    - **Cookie Security**: httpOnly=True, secure=True (production), sameSite=lax
+    - **Database Indexes**: Use existing idx_sessions_id index for efficient queries
+    - **Error Handling**: Logout always returns 200 OK even with invalid session (graceful degradation)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /auth/logout</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /auth/logout -> 200 OK {message: "Logged out successfully"}</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <notes>Deletes session from database, clears cookie, always returns 200 OK</notes>
+    </interface>
+    <interface>
+      <name>create_session</name>
+      <kind>function</kind>
+      <signature>create_session(db: Session, user_id: UUID) -> UserSession</signature>
+      <path>api-service/app/services/auth_service.py:99-122</path>
+      <notes>REUSE this function. Add logging for audit trail. Already sets 24-hour expiry.</notes>
+    </interface>
+    <interface>
+      <name>get_session_by_id (NEW)</name>
+      <kind>function</kind>
+      <signature>get_session_by_id(db: Session, session_id: UUID) -> Optional[UserSession]</signature>
+      <path>api-service/app/services/auth_service.py</path>
+      <notes>To be created. Retrieve session from database by ID for validation.</notes>
+    </interface>
+    <interface>
+      <name>update_session_activity (NEW)</name>
+      <kind>function</kind>
+      <signature>update_session_activity(db: Session, session: UserSession) -> None</signature>
+      <path>api-service/app/services/auth_service.py</path>
+      <notes>To be created. Updates last_accessed_at and potentially extends expires_at.</notes>
+    </interface>
+    <interface>
+      <name>delete_expired_sessions (NEW)</name>
+      <kind>function</kind>
+      <signature>delete_expired_sessions(db: Session) -> int</signature>
+      <path>api-service/app/services/cleanup_service.py</path>
+      <notes>To be created. Deletes sessions where expires_at < current time. Returns count.</notes>
+    </interface>
+    <interface>
+      <name>validate_session (NEW)</name>
+      <kind>middleware/dependency</kind>
+      <signature>async def get_current_session(request: Request, db: Session = Depends(get_db)) -> UserSession</signature>
+      <path>api-service/app/dependencies/session.py OR api-service/app/middleware/session.py</path>
+      <notes>To be created. Validates session cookie, checks expiry, updates activity. Raises 401 if invalid.</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest with FastAPI TestClient
+      Coverage requirement: 100% of new code must be tested
+      Test organization: tests/test_session_management.py for new session tests
+      Fixtures: Use tests/conftest.py for database and app fixtures
+      Mocking: Use @patch for external dependencies, respx for HTTP mocking
+      Test naming: test_{feature}_{scenario}_{expected_outcome}
+      All tests must pass before story completion
+    </standards>
+    <locations>
+      api-service/tests/test_session_management.py (new file)
+      api-service/tests/conftest.py (existing fixtures)
+      api-service/tests/TESTING_SESSION.md (new documentation)
+    </locations>
+    <ideas>
+      AC1 Tests:
+      - test_logout_deletes_session_and_clears_cookie
+      - test_logout_with_invalid_session_returns_200_ok
+      - test_logout_redirects_to_login_page
+      - test_subsequent_request_with_old_session_returns_401
+
+      AC2 Tests:
+      - test_inactive_session_30min_returns_401
+      - test_session_within_30min_activity_succeeds
+
+      AC3 Tests:
+      - test_protected_endpoint_updates_last_accessed_at
+      - test_session_expiry_extension_on_activity
+
+      AC4 Tests:
+      - test_session_validation_middleware_checks_existence
+      - test_session_validation_checks_absolute_expiry
+      - test_session_validation_checks_inactivity_timeout
+      - test_invalid_session_cookie_returns_401
+
+      AC5 Tests:
+      - test_background_cleanup_deletes_expired_sessions_only
+      - test_cleanup_logs_deletion_count
+      - test_manual_cleanup_endpoint_admin_only
+
+      AC6 Tests:
+      - test_session_creation_logged
+      - test_session_refresh_logged
+      - test_session_deletion_logged
+      - test_audit_log_includes_user_session_timestamp
+    </ideas>
+  </tests>
+</story-context>

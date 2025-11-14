@@ -1,0 +1,284 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>7</storyId>
+    <title>Frontend Application Shell</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/scrum/stories/1-7-frontend-application-shell.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>a responsive web interface</iWant>
+    <soThat>I can interact with the PLC Coach on desktop, tablet, or mobile</soThat>
+    <tasks>
+      - Initialize Vite + React project with TypeScript
+      - Install and configure Tailwind CSS, React Router, React Query, Axios
+      - Configure API client with environment variables and Vite proxy
+      - Implement AuthContext and useAuth hook for session management
+      - Set up routing with protected route wrappers
+      - Create Login page with Google and Clever SSO buttons
+      - Create shared Layout and Header components with logout
+      - Create placeholder Dashboard and Chat pages
+      - Configure Tailwind with custom theme and responsive breakpoints
+      - Test dev server, HMR, protected routes, login flow, responsive design
+      - Document setup instructions and environment variables
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <description>Vite + React Project Structure</description>
+      <details>Create frontend/ directory with Vite React TypeScript template. Structure includes pages/, components/, lib/ directories with Login, Dashboard, Chat pages, shared components (Header, Layout), and utilities (api-client.ts, auth.ts). Project builds successfully with static output in dist/</details>
+    </criterion>
+    <criterion id="AC2">
+      <description>Styling Framework Configuration</description>
+      <details>Tailwind CSS configured with tailwind.config.js, globals.css with Tailwind directives, utility classes render correctly</details>
+    </criterion>
+    <criterion id="AC3">
+      <description>Client-Side Routing</description>
+      <details>React Router configured with routes for /, /login, /dashboard, /chat. Navigation works without page reload, invalid routes redirect appropriately</details>
+    </criterion>
+    <criterion id="AC4">
+      <description>API Data Fetching Setup</description>
+      <details>React Query configured with QueryClient and Provider, Axios HTTP client in lib/api-client.ts, API base URL from environment variables</details>
+    </criterion>
+    <criterion id="AC5">
+      <description>Login Page Implementation</description>
+      <details>Login page displays Google and Clever login buttons, Solution Tree branding, responsive layout. Buttons redirect to /auth/google/login and /auth/clever/login</details>
+    </criterion>
+    <criterion id="AC6">
+      <description>Authentication Context</description>
+      <details>AuthContext in lib/auth.ts provides AuthProvider, useAuth() hook with isAuthenticated, user, logout. State persists across refreshes using session cookies from backend</details>
+    </criterion>
+    <criterion id="AC7">
+      <description>Protected Routes</description>
+      <details>Protected routes (/dashboard, /chat) redirect to /login when not authenticated. After login, redirect to intended page. Authenticated users access all protected routes</details>
+    </criterion>
+    <criterion id="AC8">
+      <description>Responsive Design</description>
+      <details>Layout responsive for mobile (320px-767px), tablet (768px-1023px), desktop (1024px+). UI components adapt to screen size, touch targets minimum 44x44px on mobile</details>
+    </criterion>
+    <criterion id="AC9">
+      <description>Development Environment Setup</description>
+      <details>npm run dev starts Vite dev server on localhost:5173. Vite proxy forwards /auth/* and /api/* to backend. HMR works, environment variables load from .env</details>
+    </criterion>
+    <criterion id="AC10">
+      <description>Production Build</description>
+      <details>npm run build generates minified static files in dist/ with content hashes for cache busting. Build completes without errors</details>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>TECHNICAL_ARCHITECTURE.md</path>
+        <title>Technical Architecture Document</title>
+        <section>2.1 Frontend Application</section>
+        <snippet>Frontend uses Vite 5 with React 18 (SPA). React Context for global state, React Query for server state, Tailwind CSS for styling. Static build hosted on S3 + CloudFront.</snippet>
+      </doc>
+      <doc>
+        <path>TECHNICAL_DECISIONS_SUMMARY.md</path>
+        <title>Technical Decisions Summary</title>
+        <section>Decision #1: Frontend Framework</section>
+        <snippet>Vite + React (SPA) chosen for simple architecture, fast dev experience, no SEO needed (internal tool), cheaper hosting with static files on S3</snippet>
+      </doc>
+      <doc>
+        <path>TECHNICAL_DECISIONS_SUMMARY.md</path>
+        <title>Technical Decisions Summary</title>
+        <section>Decision #6: Authentication</section>
+        <snippet>Server-side sessions in PostgreSQL for instant logout/revocation, audit trail, better security than JWT. Frontend uses httpOnly cookies automatically sent by browser</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics/epic-1-foundation-authentication.md</path>
+        <title>Epic 1: Foundation & Authentication</title>
+        <section>Story 1.7: Frontend Application Shell</section>
+        <snippet>Create responsive web interface with Vite + React, Tailwind CSS, React Router, React Query. Login page with Google/Clever SSO buttons, authentication context, protected routes</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-3-backend-api-service-foundation.md</path>
+        <title>Story 1.3: Backend API Service Foundation</title>
+        <section>Completion Notes</section>
+        <snippet>Backend API foundation complete with FastAPI, SQLAlchemy, database connection pooling, CORS middleware, structured logging. Health endpoints /health and /ready available</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-4-google-oidc-authentication.md</path>
+        <title>Story 1.4: Google OIDC Authentication</title>
+        <section>Completion Notes</section>
+        <snippet>Google OAuth implemented at /auth/google/login (redirect to Google) and /auth/google/callback (handles OAuth callback). Creates session cookie plc_session with httpOnly, secure, sameSite=lax</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-5-clever-sso-authentication.md</path>
+        <title>Story 1.5: Clever SSO Authentication</title>
+        <section>Completion Notes</section>
+        <snippet>Clever OAuth implemented at /auth/clever/login and /auth/clever/callback. Role mapping: teacher→educator, district_admin/school_admin→admin. Organization ID extracted from Clever district data</snippet>
+      </doc>
+      <doc>
+        <path>docs/scrum/stories/1-6-session-management-logout.md</path>
+        <title>Story 1.6: Session Management & Logout</title>
+        <section>Completion Notes</section>
+        <snippet>Session management complete with POST /auth/logout endpoint, session validation dependency in app/dependencies/session.py, APScheduler background cleanup, audit logging. Session cookie: plc_session (httpOnly, managed by backend)</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>api-service/app/routers/auth.py</path>
+        <kind>router</kind>
+        <symbol>router</symbol>
+        <lines>all</lines>
+        <reason>OAuth endpoints for Google (/auth/google/login, /auth/google/callback) and Clever (/auth/clever/login, /auth/clever/callback). Logout endpoint POST /auth/logout. Frontend login buttons redirect to these endpoints</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/dependencies/session.py</path>
+        <kind>dependency</kind>
+        <symbol>get_current_session</symbol>
+        <lines>all</lines>
+        <reason>Session validation dependency used by protected endpoints. Validates session cookie, checks expiry and activity timeout. Frontend will call protected endpoints to verify authentication state</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/routers/health.py</path>
+        <kind>router</kind>
+        <symbol>router</symbol>
+        <lines>all</lines>
+        <reason>Health check endpoints GET /health and GET /ready. Frontend can use these for backend availability checks during development</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/config.py</path>
+        <kind>configuration</kind>
+        <symbol>Settings</symbol>
+        <lines>all</lines>
+        <reason>Configuration including session cookie name (plc_session), CORS settings, database URLs. Frontend needs to align with CORS allowed origins</reason>
+      </artifact>
+      <artifact>
+        <path>api-service/app/main.py</path>
+        <kind>application</kind>
+        <symbol>app</symbol>
+        <lines>all</lines>
+        <reason>FastAPI application entry point with CORS middleware configuration, router registration, lifespan events. Shows how backend is configured and which endpoints are available</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.109.0" />
+        <package name="uvicorn" version="0.27.0" />
+        <package name="authlib" version="1.3.0" />
+        <package name="SQLAlchemy" version="2.0.25" />
+        <package name="psycopg2-binary" version="2.9.9" />
+        <package name="pydantic" version="2.5.3" />
+        <package name="pytest" version="7.4.4" />
+      </python>
+      <frontend note="No package.json exists yet - will be created by this story">
+        <planned-package name="vite" version="~5.0" />
+        <planned-package name="react" version="~18.0" />
+        <planned-package name="react-dom" version="~18.0" />
+        <planned-package name="react-router-dom" version="latest" />
+        <planned-package name="@tanstack/react-query" version="latest" />
+        <planned-package name="axios" version="latest" />
+        <planned-package name="tailwindcss" version="latest" />
+        <planned-package name="typescript" version="~5.0" />
+        <planned-package name="zod" version="latest" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="authentication">Frontend MUST NOT store authentication tokens manually. Backend manages sessions via httpOnly cookies (plc_session). Frontend relies on browser automatically sending cookies with requests</constraint>
+    <constraint type="api-communication">Frontend MUST configure Axios with withCredentials: true to include cookies in cross-origin requests. Use Vite proxy in development to avoid CORS issues</constraint>
+    <constraint type="oauth-flow">Login buttons MUST redirect to backend OAuth endpoints (/auth/google/login, /auth/clever/login), NOT make API calls. Backend handles OAuth flow and redirects back to frontend after success</constraint>
+    <constraint type="protected-routes">Protected routes MUST check authentication state and redirect to /login if not authenticated. Use React Router Navigate or redirect logic in route guard</constraint>
+    <constraint type="responsive-design">MUST support mobile (320px+), tablet (768px+), desktop (1024px+). Touch targets minimum 44x44px on mobile for accessibility</constraint>
+    <constraint type="build-output">Production build MUST generate static files only (no server-side rendering). Output must be deployable to S3 + CloudFront</constraint>
+    <constraint type="environment-config">API base URL MUST be configurable via environment variables (VITE_API_BASE_URL). Different values for development (localhost:8000) and production (api.plccoach.com)</constraint>
+    <constraint type="session-verification">Frontend SHOULD call a backend endpoint (future: GET /auth/me) on mount to verify session validity and restore authentication state</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Google OAuth Login</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /auth/google/login</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <description>Redirects to Google OAuth consent screen. Sets oauth_state cookie for CSRF protection. After user grants consent, Google redirects to /auth/google/callback</description>
+    </interface>
+    <interface>
+      <name>Google OAuth Callback</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /auth/google/callback?code=...&state=...</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <description>Handles OAuth callback from Google. Validates state, exchanges code for token, creates/updates user, creates session, sets plc_session cookie, redirects to /dashboard</description>
+    </interface>
+    <interface>
+      <name>Clever OAuth Login</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /auth/clever/login</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <description>Redirects to Clever OAuth authorization screen. Sets oauth_state cookie. After authorization, Clever redirects to /auth/clever/callback</description>
+    </interface>
+    <interface>
+      <name>Clever OAuth Callback</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /auth/clever/callback?code=...&state=...</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <description>Handles OAuth callback from Clever. Validates state, exchanges code for token, creates/updates user with role mapping (teacher→educator, admin roles→admin), creates session, redirects to /dashboard</description>
+    </interface>
+    <interface>
+      <name>Logout</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /auth/logout</signature>
+      <path>api-service/app/routers/auth.py</path>
+      <description>Deletes session from database, clears plc_session cookie, returns 200 OK. Frontend logout function should call this endpoint then redirect to /login</description>
+    </interface>
+    <interface>
+      <name>Health Check</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /health</signature>
+      <path>api-service/app/routers/health.py</path>
+      <description>Returns 200 OK with service status. Frontend can use for backend availability checks</description>
+    </interface>
+    <interface>
+      <name>Ready Check</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /ready</signature>
+      <path>api-service/app/routers/health.py</path>
+      <description>Returns 200 when database is accessible, 503 otherwise. Frontend can use to verify backend is fully operational</description>
+    </interface>
+    <interface>
+      <name>Session Validation Dependency</name>
+      <kind>FastAPI Depends()</kind>
+      <signature>get_current_session(request: Request, db: Session) -> UserSession</signature>
+      <path>api-service/app/dependencies/session.py</path>
+      <description>Internal dependency used by protected endpoints to validate session cookie. Checks existence, expiry (24h), and activity timeout (30min). Returns 401 if invalid. Frontend should handle 401 responses by redirecting to login</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Frontend testing will use Vitest (Vite's test runner) for unit tests and React Testing Library for component tests. Focus on critical user flows: login redirect, protected route guards, authentication context state management, logout flow. Test responsive behavior using viewport mocking. Aim for ~60% coverage focusing on authentication and routing logic. Integration tests can manually verify OAuth flows work end-to-end with backend.
+    </standards>
+    <locations>
+      frontend/src/**/*.test.tsx - Component tests
+      frontend/src/**/*.test.ts - Utility/hook tests
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test that Vite project structure exists with expected directories and files</idea>
+      <idea ac="AC2">Test Tailwind utility classes apply correct styles to components</idea>
+      <idea ac="AC3">Test React Router navigation between pages without page reload</idea>
+      <idea ac="AC3">Test invalid route redirects to 404 or login page</idea>
+      <idea ac="AC4">Test Axios client configured with correct base URL from environment variable</idea>
+      <idea ac="AC4">Test Axios client includes credentials (withCredentials: true)</idea>
+      <idea ac="AC5">Test Login page renders Google and Clever buttons</idea>
+      <idea ac="AC5">Test Login page buttons link to correct OAuth endpoints</idea>
+      <idea ac="AC6">Test useAuth hook provides isAuthenticated, user, logout</idea>
+      <idea ac="AC6">Test AuthContext persists state across component remounts</idea>
+      <idea ac="AC7">Test protected routes redirect to /login when not authenticated</idea>
+      <idea ac="AC7">Test protected routes allow access when authenticated</idea>
+      <idea ac="AC7">Test redirect to intended page after login</idea>
+      <idea ac="AC8">Test responsive layout adapts to mobile, tablet, desktop viewports</idea>
+      <idea ac="AC8">Test touch targets are at least 44x44px on mobile</idea>
+      <idea ac="AC9">Test environment variables load correctly</idea>
+      <idea ac="AC10">Test production build generates minified files with content hashes</idea>
+    </ideas>
+  </tests>
+</story-context>
