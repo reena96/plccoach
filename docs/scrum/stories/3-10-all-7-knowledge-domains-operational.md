@@ -1,6 +1,6 @@
 # Story 3.10: All 7 Knowledge Domains Operational
 
-Status: drafted
+Status: ready-for-dev
 
 ## Story
 
@@ -83,8 +83,33 @@ so that educators can get guidance on any PLC topic.
 
 ### Context Reference
 
-<!-- Will be filled by story-context workflow -->
+- docs/scrum/stories/3-10-all-7-knowledge-domains-operational.context.xml
 
 ### File List
 
-<!-- Will be filled during implementation -->
+**Created:**
+- docs/testing/domain-coverage-tests.md (test suite with 39 queries)
+- scripts/validate_domains.py (automated validation script)
+- docs/validation/epic3_3-10_validation.md (validation guide)
+
+**Modified:**
+- docs/scrum/stories/3-10-all-7-knowledge-domains-operational.md (this file)
+- docs/scrum/sprint-status.yaml (status updates)
+
+### Implementation Summary
+
+This validation story creates the infrastructure to test all 7 PLC knowledge domains:
+
+1. **Test Suite:** Comprehensive document with 35 domain-specific queries, 4 cross-domain tests, and 4 clarification tests
+2. **Validation Script:** Executable Python script that automates testing when API service is operational
+3. **Validation Guide:** Step-by-step manual validation instructions
+
+**Status:** Implementation complete. Validation script ready to run when system is operational with ingested content.
+
+**Acceptance Criteria Status:**
+- ✅ AC#1: Domain test suite created (39 queries across all domains)
+- ⏳ AC#2: Expected book citations documented (awaiting manual validation)
+- ⏳ AC#3: Cross-domain query tests defined (awaiting manual validation)
+- ⏳ AC#4: Clarification tests defined (awaiting manual validation)
+
+**Note:** This story creates validation infrastructure. Actual test execution requires operational API service with Epic 2 content ingestion complete.
